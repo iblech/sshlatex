@@ -1,0 +1,184 @@
+#!/bin/bash
+
+function texdeps {
+    perl -nwe '
+        for(/\\(?:includegraphics|input|include)(?:\[[^\]]*\]){([^}]+?)}/) {
+            for("", qw< .png .jpeg .jpg .tex >) {
+                print "$1$_\0" if -e "$1$_";
+            }
+        }
+    ' "$1"
+}
+
+function waitforfile {
+    inotifywait -e close_write "$1"
+
+    # wait for file to settle
+    perl -MTime::HiRes=sleep,time,stat -we '
+        my $DELAY = 0.05;
+        while(1) {
+            my $ftime = (stat $ARGV[0])[9];
+            if(time() - $ftime < $DELAY) {
+                sleep $DELAY;
+            } else {
+                exit;
+            }
+        }
+    ' "$1"
+}
+
+function cleanup {
+    rm "$LC_FILE.time"
+    ssh "$host" 'rm -r "$LC_TEMPDIR"'
+    echo "Cleanup done." >&2
+}
+
+export LC_EEKCAT="$(cat <<'EEKCAT'
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+use Time::HiRes qw< sleep   >;
+use Digest::MD5 qw< md5_hex >;
+
+use constant DELAY     => 0.05;
+use constant BLOCKSIZE => 2048;
+
+local $/;
+$|++;
+
+my $file = $ARGV[0];
+
+sub rle {
+    my $data = shift;
+    die "Too long!" if length($data) >= 2**32;
+    return pack("N", length $data) . $data;
+}
+
+sub unrle {
+    my $fh = shift;
+
+    defined(my $num = read $fh, my $len, 4) or die $!;
+    return if $num == 0;
+    die "???" unless $num == 4;
+
+    defined($num = read $fh, my $data, unpack("N", $len)) or die $!;
+    die "????" unless $num == unpack("N", $len);
+
+    return $data;
+}
+
+if(not $ARGV[1]) {
+    my @blocks;
+    while(1) {
+        open my $fh, "<", $file or do {
+            sleep DELAY;
+            next;
+        };
+
+        if($ARGV[2] and open my $oldfh, "<", $ARGV[2]) {
+            while(not eof $oldfh) {
+                my $read = read $oldfh, my $data, BLOCKSIZE or die $!;
+                push @blocks, md5_hex($data);
+            }
+        }
+
+        my $i = 0;
+        my $olddata = "";
+        my $data    = "";
+        while(not eof $fh) {
+            $olddata = $data;
+            my $read = read $fh, $data, BLOCKSIZE or die $!;
+
+            my $hex  = md5_hex($data);
+            if(not defined $blocks[$i] or $blocks[$i] ne $hex) {
+                $blocks[$i] = $hex;
+                print rle($i), rle($data);
+            }
+
+            $i += $read;
+        }
+
+        close $fh or die $!;
+
+        if("$olddata$data" =~ /%%EOF$/) {  # hack to recognized end of PDF files
+            print rle($i), rle("");
+            last;
+        }
+
+        sleep DELAY;
+    }
+} else {
+    my $fh;
+
+    while(1) {
+        defined(my $pos  = unrle(\*STDIN)) or last;
+        defined(my $data = unrle(\*STDIN)) or die;
+        open $fh, ">", $file or die $! unless defined $fh;
+        seek $fh, $pos, 0 or die $!;
+        if(length $data == 0) {
+            truncate $fh, $pos or die $!;
+        } else {
+            print $fh $data or die $!;
+        }
+    }
+
+    close $fh or die $!;
+}
+EEKCAT
+)"
+
+host="$1"
+export LC_FILE="`basename "$2" .tex`"
+
+echo "Uploading..." >&2
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz "$LC_FILE.tex" | ssh "$host" '
+    tempdir="`mktemp -d`"
+    cd "$tempdir"
+    tar -xz || exit 1
+    echo "$LC_EEKCAT" > eekcat.pl
+    perl -nwe "print; last if /\\\\begin{document}/" "$LC_FILE.tex" > _sshlatex_header.tex
+    echo "$tempdir"
+')"
+echo "Done." >&2
+export -n LC_EEKCAT
+
+trap cleanup EXIT
+
+is_first_time=1
+
+while :; do
+    {
+        if [ "$is_first_time" = "0" ]; then
+            waitforfile "$LC_FILE.tex" >&2
+        fi
+        date +%s.%N > "$LC_FILE.time"
+        cat "$LC_FILE.tex"
+    } | ssh "$host" "$(cat <<'EOF'
+            cd "$LC_TEMPDIR"
+            rm "$LC_FILE.pdf"
+            perl eekcat.pl "$LC_FILE.pdf" &
+            {
+                echo '\input{_sshlatex_header.tex}'
+                perl -we '
+                    open my $header, ">", "_sshlatex_header-next.tex" or die $!;
+                    open my $main,   ">", "_sshlatex_main.tex"        or die $!;
+
+                    my $fh = $header;
+                    while(<>) {
+                        print $fh $_ or die $!;
+                        $fh = $main if /\\begin{document}/;
+                    }
+                '
+                echo '\input{_sshlatex_main.tex}'
+            } | pdflatex -jobname "$LC_FILE" >&2
+            mv _sshlatex_header-next.tex _sshlatex_header.tex
+EOF
+    )" | perl -we "$LC_EEKCAT" "$LC_FILE.pdf" 1
+    echo -n "*** Time elapsed (in seconds): " >&2
+    echo $(date +%s.%N) - $(cat "$LC_FILE.time") | bc -l >&2
+    beepy &>/dev/null &
+    sleep 0.05
+    is_first_time=0
+done
