@@ -51,7 +51,7 @@ cryptography handshake. Add the following to two lines to your local
   This is still faster than waiting for `pdflatex` to end and then doing a
   proper `rsync`.
 * Temporary files on the server are properly cleaned up on `^C`.
-* Supports filenames with special characters in them.
+* Filenames with special characters in them are supported.
 
 
 ## Shortcomings
