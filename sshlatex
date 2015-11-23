@@ -15,6 +15,9 @@ function texdeps {
             }
         }
     ' "$1"
+
+    bbl="`basename "$1" .tex`.bbl"
+    [ -e "$bbl" ] && { echo -n "$bbl"; echo -en "\0"; }
 }
 
 # Waits for the file given in the first argument to change.

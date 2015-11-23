@@ -39,7 +39,8 @@ cryptography handshake. Add the following to two lines to your local
 
 * No installation on the remote host is necessary.
 * Images and sources included with `\includegraphics`, `\input`, and `\include`
-  are automatically copied to the compile server.
+  are automatically copied to the compile server. Accompanying `.bbl`
+  files are as well.
 * Even before the source file is changed, LaTeX gets already started on the
   remote host with the preamble of the last run. This way all the required
   packages are already loaded when the new version is ready to be compiled,
