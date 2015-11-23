@@ -1,5 +1,12 @@
 #!/bin/bash
+# Usage: sshlatex ssh.example.org foo.tex
 
+# For passing some kinds of data, for instance file names, to the remote host,
+# we employ the LC_* environment variables. These are automatically transmitted
+# by ssh. Yes, this is one of many hacks in this tool.
+
+# Given a LaTeX source file as first argument, outputs a null-delimited list of
+# dependencies the file has.
 function texdeps {
     perl -nwe '
         for(/\\(?:includegraphics|input|include)(?:\[[^\]]*\]){([^}]+?)}/) {
@@ -10,10 +17,11 @@ function texdeps {
     ' "$1"
 }
 
+# Waits for the file given in the first argument to change.
 function waitforfile {
-    inotifywait -e close_write "$1"
+    inotifywait -qq -e close_write "$1"
 
-    # wait for file to settle
+    # Wait for the file to settle.
     perl -MTime::HiRes=sleep,time,stat -we '
         my $DELAY = 0.05;
         while(1) {
@@ -27,97 +35,124 @@ function waitforfile {
     ' "$1"
 }
 
+# Cleans up the temporary files (locally and on the remote end).
 function cleanup {
+    echo -n "Cleaning up... " >&2
     rm "$LC_FILE.time"
     ssh "$host" 'rm -r "$LC_TEMPDIR"'
-    echo "Cleanup done." >&2
+    echo "done." >&2
 }
 
+# Perl program to stream the PDF file to the local host while it is being
+# written to. Since pdflatex doesn't simply append to the output, but seeks and
+# overwrites earlier parts, this is not completely trivial.
+#
+# In OUTPUT mode, eekcat repeatedly works through the file in small chunks
+# and keeps track of their MD5 checksums. If there are any changes, the
+# pertaining blocks are written to STDOUT (with some position information).
+#
+# In INPUT mode, eekcat reassembles a stream as provided by the OUTPUT mode and
+# writes it to a file.
 export LC_EEKCAT="$(cat <<'EEKCAT'
 #!/usr/bin/perl
 
 use warnings;
 use strict;
 
-use Time::HiRes qw< sleep   >;
-use Digest::MD5 qw< md5_hex >;
+use Time::HiRes qw< sleep >;
+use Digest::MD5 qw< md5   >;
 
-use constant DELAY     => 0.05;
-use constant BLOCKSIZE => 2048;
-
-local $/;
-$|++;
+use constant DELAY     => 0.05;  # delay between rereadings
+use constant BLOCKSIZE => 2048;  # size of chunks (experimentally determined)
 
 my $file = $ARGV[0];
 
-sub rle {
+# Formats data by prefixing its length (as a 32-bit integer in big-endian order).
+# To be used in list context, for instance as arguments to `print`.
+# The obvious alternative would be to return the concatenated string.
+# This would be inefficient. Not that it matters, of course, with our repeated
+# rereading. It would be better to use LD_PRELOAD tricks to actually find out
+# which parts are rewritten by pdflatex.
+sub serialize {
     my $data = shift;
     die "Too long!" if length($data) >= 2**32;
-    return pack("N", length $data) . $data;
+    return pack("N", length $data), $data;
 }
 
-sub unrle {
+# Tries to unmarshal data formatted by `serialize`.
+# Returns undef if the indicated length of the data is zero.
+# Dies on any reading errors.
+sub unserialize {
     my $fh = shift;
 
     defined(my $num = read $fh, my $len, 4) or die $!;
-    return if $num == 0;
-    die "???" unless $num == 4;
+    return undef if $num == 0;
+    die unless $num == 4;
 
     defined($num = read $fh, my $data, unpack("N", $len)) or die $!;
-    die "????" unless $num == unpack("N", $len);
+    die unless $num == unpack("N", $len);
 
     return $data;
 }
 
-if(not $ARGV[1]) {
-    my @blocks;
+if($ARGV[1] eq "OUTPUT") {
+    # Disable output buffering.
+    $|++;
+
+    # Hash of the MD5 checksum of each block.
+    # Indexed by the starting positions.
+    my %blocks;
     while(1) {
+        # Try to open the input file; don't worry if it's not there yet.
         open my $fh, "<", $file or do {
             sleep DELAY;
             next;
         };
 
-        if($ARGV[2] and open my $oldfh, "<", $ARGV[2]) {
-            while(not eof $oldfh) {
-                my $read = read $oldfh, my $data, BLOCKSIZE or die $!;
-                push @blocks, md5_hex($data);
-            }
-        }
-
-        my $i = 0;
-        my $olddata = "";
-        my $data    = "";
+        my $pos      = 0;   # current position in the input file
+        my $prevdata = "";  # contents of the previous block
+        my $data     = "";  # contents of the new block
         while(not eof $fh) {
-            $olddata = $data;
-            my $read = read $fh, $data, BLOCKSIZE or die $!;
+            $prevdata = $data;
+            my $len = read $fh, $data, BLOCKSIZE or die $!;
 
-            my $hex  = md5_hex($data);
-            if(not defined $blocks[$i] or $blocks[$i] ne $hex) {
-                $blocks[$i] = $hex;
-                print rle($i), rle($data);
+            my $hex = md5($data);
+            if(not defined $blocks{$pos} or $blocks{$pos} ne $hex) {
+                $blocks{$pos} = $hex;
+                print serialize($pos), serialize($data);  # stream block to STDOUT
             }
 
-            $i += $read;
+            $pos += $len;
         }
 
         close $fh or die $!;
 
-        if("$olddata$data" =~ /%%EOF$/) {  # hack to recognized end of PDF files
-            print rle($i), rle("");
+        # We stop not when EOF is reached, but when the PDF file is actually
+        # fully written. We recognize this by looking for the PDF ending
+        # marker. This is a hack; a better way would be to install an
+        # appropriate signal handler.
+        if("$prevdata$data" =~ /%%EOF$/) {
+            print serialize($pos), serialize("");  # signalize EOF
             last;
         }
 
         sleep DELAY;
     }
-} else {
+} elsif($ARGV[1] eq "INPUT") {
+    # Variable to contain the output file handle. We don't open the output file
+    # just yet, because we don't want to clobber it while we're still waiting
+    # on the first data to trickle in.
     my $fh;
 
     while(1) {
-        defined(my $pos  = unrle(\*STDIN)) or last;
-        defined(my $data = unrle(\*STDIN)) or die;
+        # Read a chunk. Stop if EOF is reached.
+        defined(my $pos  = unserialize(\*STDIN)) or last;
+        defined(my $data = unserialize(\*STDIN)) or die;
+
         open $fh, ">", $file or die $! unless defined $fh;
         seek $fh, $pos, 0 or die $!;
-        if(length $data == 0) {
+
+        if(length $data == 0) {  # EOF was signalized
             truncate $fh, $pos or die $!;
         } else {
             print $fh $data or die $!;
@@ -125,6 +160,8 @@ if(not $ARGV[1]) {
     }
 
     close $fh or die $!;
+} else {
+  die;
 }
 EEKCAT
 )"
@@ -132,16 +169,25 @@ EEKCAT
 host="$1"
 export LC_FILE="`basename "$2" .tex`"
 
-echo "Uploading..." >&2
+echo "Initial upload..." >&2
 export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz "$LC_FILE.tex" | ssh "$host" '
     tempdir="`mktemp -d`"
     cd "$tempdir"
-    tar -xz || exit 1
+
+    tar -xz || exit 1  # unpack the source file and its dependencies
+
     echo "$LC_EEKCAT" > eekcat.pl
+
+    # Extract the LaTeX preamble.
     perl -nwe "print; last if /\\\\begin{document}/" "$LC_FILE.tex" > _sshlatex_header.tex
+
+    # Return the path of the working directory to the local host.
     echo "$tempdir"
 ')"
 echo "Done." >&2
+
+# As we uploaded eekcat to the remote host, we don't have to send its
+# source code with every further ssh invocation.
 export -n LC_EEKCAT
 
 trap cleanup EXIT
@@ -149,18 +195,29 @@ trap cleanup EXIT
 is_first_time=1
 
 while :; do
+    # Wait for changes in the source file and push them to the remote.
+    # Meanwhile, prestart pdflatex with the preamble of the last run.
     {
         if [ "$is_first_time" = "0" ]; then
             waitforfile "$LC_FILE.tex" >&2
         fi
-        date +%s.%N > "$LC_FILE.time"
+        date +%s.%N > "$LC_FILE.time"  # for printing statistics
         cat "$LC_FILE.tex"
     } | ssh "$host" "$(cat <<'EOF'
             cd "$LC_TEMPDIR"
-            rm "$LC_FILE.pdf"
-            perl eekcat.pl "$LC_FILE.pdf" &
+
+            # Start streaming the output file.
+            rm "$LC_FILE.pdf" 2>/dev/null
+            perl eekcat.pl "$LC_FILE.pdf" OUTPUT &
+
             {
+                # Use the preamble of the last run.
                 echo '\input{_sshlatex_header.tex}'
+
+                # Then wait for the updated main part to trickle in.
+                # It's important to store the new preamble in a temporary file,
+                # as pdflatex would not be able to read the header file quicker
+                # than we'd truncate it.
                 perl -we '
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
                     open my $main,   ">", "_sshlatex_main.tex"        or die $!;
@@ -173,12 +230,16 @@ while :; do
                 '
                 echo '\input{_sshlatex_main.tex}'
             } | pdflatex -jobname "$LC_FILE" >&2
+
             mv _sshlatex_header-next.tex _sshlatex_header.tex
 EOF
-    )" | perl -we "$LC_EEKCAT" "$LC_FILE.pdf" 1
+    )" | perl -we "$LC_EEKCAT" "$LC_FILE.pdf" INPUT || exit
+
     echo -n "*** Time elapsed (in seconds): " >&2
     echo $(date +%s.%N) - $(cat "$LC_FILE.time") | bc -l >&2
+    echo
     beepy &>/dev/null &
+
     sleep 0.05
     is_first_time=0
 done

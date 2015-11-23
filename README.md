@@ -50,6 +50,7 @@ cryptography handshake. Add the following to two lines to your local
   This is still faster than waiting for `pdflatex` to end and then doing a
   proper `rsync`.
 * Temporary files on the server are properly cleaned up on `^C`.
+* Supports filenames with special characters in them.
 
 
 ## Shortcomings
@@ -57,7 +58,6 @@ cryptography handshake. Add the following to two lines to your local
 * Written in haste, will contain bugs. Is a grave assortment of hacks, the
   least of which is using the `LC_*` environment variables to pass data to the
   remote host.
-* Doesn't contain any code comments at all. (This will be fixed soon.)
 * Doesn't synchronize changes in the included images and sources. You have to
   restart `sshlatex` to update the server's copies.
 * Not customizable.
