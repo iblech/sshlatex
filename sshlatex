@@ -182,7 +182,11 @@ export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz "$LC_FILE.tex" |
     echo "$LC_EEKCAT" > eekcat.pl
 
     # Extract the LaTeX preamble.
-    perl -nwe "print; last if /\\\\begin{document}/" "$LC_FILE.tex" > _sshlatex_header.tex
+    # It\'s important that the begin-of-document marker is put into
+    # _sshlatex_main.tex instead of _sshlatex_header.tex. Else PDF streaming
+    # might start before new content is ready, causing the output file to be
+    # clobbered prematurely. (This behaviour seems to be fostered by biblatex.)
+    perl -nwe "last if /\\\\begin{document}/; print" "$LC_FILE.tex" > _sshlatex_header.tex
 
     # Return the path of the working directory to the local host.
     echo "$tempdir"
@@ -227,8 +231,8 @@ while :; do
 
                     my $fh = $header;
                     while(<>) {
-                        print $fh $_ or die $!;
                         $fh = $main if /\\begin{document}/;
+                        print $fh $_ or die $!;
                     }
                 '
                 echo '\input{_sshlatex_main.tex}'
