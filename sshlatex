@@ -9,8 +9,8 @@
 # dependencies the file has.
 function texdeps {
     perl -nwe '
-        for(/\\(?:includegraphics|input|include)(?:\[[^\]]*\]){([^}]+?)}/) {
-            for("", qw< .png .jpeg .jpg .tex >) {
+        for(/\\(?:includegraphics|input|include)(?:\[[^\]]*\])?{([^}]+)}/) {
+            for("", qw< .png .jpeg .jpg .tex .bbl >) {
                 print "$1$_\0" if -e "$1$_";
             }
         }
