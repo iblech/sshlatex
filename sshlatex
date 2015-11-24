@@ -99,9 +99,7 @@ sub unserialize {
 }
 
 if($ARGV[1] eq "OUTPUT") {
-    # Disable output buffering.
-    # TODO: Check whether this is actually an advantage.
-    $|++;
+    require IO::Handle;  # not "use" because we need it only in this branch
 
     # Hash of the MD5 checksum of each block.
     # Indexed by the starting positions.
@@ -156,6 +154,7 @@ if($ARGV[1] eq "OUTPUT") {
             next;  # we may skip the DELAY, since the file is fully written
         }
 
+        $fh->flush();
         sleep DELAY;
     }
 } elsif($ARGV[1] eq "INPUT") {
