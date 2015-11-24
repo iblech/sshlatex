@@ -105,6 +105,11 @@ if($ARGV[1] eq "OUTPUT") {
     # Indexed by the starting positions.
     my %blocks;
     my $stop_after_this_run;
+    my $input_file_is_complete;
+
+    # Subscribe to the file-has-settled notification.
+    $SIG{USR1} = sub { $input_file_is_complete = 1 };
+
     while(1) {
         # Try to open the input file; don't worry if it's not there yet.
         open my $fh, "<", $file or do {
@@ -112,12 +117,10 @@ if($ARGV[1] eq "OUTPUT") {
             next;
         };
 
-        my $pos   = 0;   # current position in the input file
-        my $last6 = "";  # the last six bytes read, necessary to detect the ending marker
-        my $len;         # length of most recently read block
+        my $pos   = 0;  # current position in the input file
+        my $len;        # length of most recently read block
         while(not eof $fh) {
-            $len   = read $fh, my $data, BLOCKSIZE or die $!;
-            $last6 = substr($last6 . $data, -6);
+            $len = read $fh, my $data, BLOCKSIZE or die $!;
 
             # Since we use a length-zero chunk to signalize EOF to the
             # receiving end, we may not emit a chunk which just happens to be
@@ -147,10 +150,9 @@ if($ARGV[1] eq "OUTPUT") {
         }
 
         # We stop not when EOF is reached, but when the PDF file is actually
-        # fully written. We recognize this by looking for the PDF ending
-        # marker. This is a hack; a better way would be to install an
-        # appropriate signal handler.
-        if($last6 eq "%%EOF\n") {
+        # fully written. We rely on being sent the SIGUSR1 signal to detect
+        # this.
+        if($input_file_is_complete) {
             $stop_after_this_run++;
             next;  # we may skip the DELAY, since the file is fully written
         }
@@ -263,6 +265,9 @@ while :; do
                 '
                 echo '\input{_sshlatex_main.tex}'
             } | pdflatex -jobname "$LC_FILE" >&2
+
+            # Signalize completion of the output file to eekcat
+            kill -USR1 %1
 
             mv _sshlatex_header-next.tex _sshlatex_header.tex
 EOF
