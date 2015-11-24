@@ -254,9 +254,10 @@ while :; do
 EOF
     )" | perl -we "$LC_EEKCAT" "$LC_FILE.pdf" INPUT || exit
 
-    echo -n "*** Time elapsed (in seconds): " >&2
-    echo $(date +%s.%N) - $(cat "$LC_FILE.time") | bc -l >&2
-    echo
+    echo -n "*** Elapsed time: " >&2
+    perl -we "printf '%.2f seconds', $(date +%s.%N) - $(cat "$LC_FILE.time")" >&2
+    echo >&2
+    echo >&2
     beepy &>/dev/null &
 
     sleep 0.05
