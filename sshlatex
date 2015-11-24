@@ -114,8 +114,9 @@ if($ARGV[1] eq "OUTPUT") {
 
         my $pos   = 0;   # current position in the input file
         my $last6 = "";  # the last six bytes read, necessary to detect the ending marker
+        my $len;         # length of most recently read block
         while(not eof $fh) {
-            my $len = read $fh, my $data, BLOCKSIZE or die $!;
+            $len   = read $fh, my $data, BLOCKSIZE or die $!;
             $last6 = substr($last6 . $data, -6);
 
             # Since we use a length-zero chunk to signalize EOF to the
@@ -134,7 +135,7 @@ if($ARGV[1] eq "OUTPUT") {
                 $blocks{$pos} = $hex;
                 print serialize($pos), serialize($data);  # stream block to STDOUT
             }
-
+        } continue {
             $pos += $len;
         }
 
