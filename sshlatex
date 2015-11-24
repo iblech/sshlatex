@@ -113,12 +113,12 @@ if($ARGV[1] eq "OUTPUT") {
             next;
         };
 
-        my $pos      = 0;   # current position in the input file
-        my $prevdata = "";  # contents of the previous block
-        my $data     = "";  # contents of the new block
+        my $pos   = 0;   # current position in the input file
+        my $last6 = "";  # the last six bytes read, necessary to detect the ending marker
         while(not eof $fh) {
-            $prevdata = $data;
-            my $len = read $fh, $data, BLOCKSIZE or die $!;
+            my $len = read $fh, my $data, BLOCKSIZE or die $!;
+
+            $last6 = substr($last6 . $data, -6);
 
             # Since we use a length-zero chunk to signalize EOF to the
             # receiving end, we may not emit a chunk which just happens to be
@@ -140,7 +140,7 @@ if($ARGV[1] eq "OUTPUT") {
         # fully written. We recognize this by looking for the PDF ending
         # marker. This is a hack; a better way would be to install an
         # appropriate signal handler.
-        if("$prevdata$data" =~ /%%EOF$/) {
+        if($last6 eq "%%EOF\n") {
             print serialize($pos), serialize("");  # signalize EOF
             last;
         }
