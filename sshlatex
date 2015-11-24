@@ -171,7 +171,10 @@ if($ARGV[1] eq "OUTPUT") {
         }
     }
 
-    close $fh or die $!;
+    close $fh or die $! if $fh;
+    # It can actually happen that $fh is still undefined at this point.
+    # For instance, this is the case when the pipe was broken before any data
+    # could be transmitted.
 } else {
     die;
 }
