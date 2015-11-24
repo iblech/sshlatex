@@ -106,6 +106,7 @@ if($ARGV[1] eq "OUTPUT") {
     # Hash of the MD5 checksum of each block.
     # Indexed by the starting positions.
     my %blocks;
+    my $stop_after_this_run;
     while(1) {
         # Try to open the input file; don't worry if it's not there yet.
         open my $fh, "<", $file or do {
@@ -117,13 +118,18 @@ if($ARGV[1] eq "OUTPUT") {
         my $last6 = "";  # the last six bytes read, necessary to detect the ending marker
         while(not eof $fh) {
             my $len = read $fh, my $data, BLOCKSIZE or die $!;
-
             $last6 = substr($last6 . $data, -6);
 
             # Since we use a length-zero chunk to signalize EOF to the
             # receiving end, we may not emit a chunk which just happens to be
             # empty.
             next if $len == 0;
+
+            # Don't bother with partial chunks if we are not in the last run.
+            # The usual reason for a partial chunk is that it is the last chunk
+            # of the file, which we expect to change anyway since the file will
+            # likely grow.
+            next if $len < BLOCKSIZE and not $stop_after_this_run;
 
             my $hex = md5($data);
             if(not defined $blocks{$pos} or $blocks{$pos} ne $hex) {
@@ -136,13 +142,18 @@ if($ARGV[1] eq "OUTPUT") {
 
         close $fh or die $!;
 
+        if($stop_after_this_run) {
+            print serialize($pos), serialize("");  # signalize EOF
+            last;
+        }
+
         # We stop not when EOF is reached, but when the PDF file is actually
         # fully written. We recognize this by looking for the PDF ending
         # marker. This is a hack; a better way would be to install an
         # appropriate signal handler.
         if($last6 eq "%%EOF\n") {
-            print serialize($pos), serialize("");  # signalize EOF
-            last;
+            $stop_after_this_run++;
+            next;  # we may skip the DELAY, since the file is fully written
         }
 
         sleep DELAY;
