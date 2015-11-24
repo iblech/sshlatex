@@ -120,6 +120,11 @@ if($ARGV[1] eq "OUTPUT") {
             $prevdata = $data;
             my $len = read $fh, $data, BLOCKSIZE or die $!;
 
+            # Since we use a length-zero chunk to signalize EOF to the
+            # receiving end, we may not emit a chunk which just happens to be
+            # empty.
+            next if $len == 0;
+
             my $hex = md5($data);
             if(not defined $blocks{$pos} or $blocks{$pos} ne $hex) {
                 $blocks{$pos} = $hex;
