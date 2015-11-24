@@ -219,8 +219,9 @@ while :; do
             # It's important that only the raw source data is sent to STDOUT.
             # We don't trust inotifywait enough in this regard.
         fi
+        echo "Uploading changed source file..." >&2
         date +%s.%N > "$LC_FILE.time"  # for printing statistics
-        cat "$LC_FILE.tex"
+        gzip -9c "$LC_FILE.tex"
     } | ssh "$host" "$(cat <<'EOF'
             cd "$LC_TEMPDIR"
 
@@ -236,7 +237,7 @@ while :; do
                 # It's important to store the new preamble in a temporary file,
                 # as pdflatex would not be able to read the header file quicker
                 # than we'd truncate it.
-                perl -we '
+                gunzip | perl -we '
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
                     open my $main,   ">", "_sshlatex_main.tex"        or die $!;
 
