@@ -100,6 +100,7 @@ sub unserialize {
 
 if($ARGV[1] eq "OUTPUT") {
     # Disable output buffering.
+    # TODO: Check whether this is actually an advantage.
     $|++;
 
     # Hash of the MD5 checksum of each block.
@@ -147,6 +148,9 @@ if($ARGV[1] eq "OUTPUT") {
     # on the first data to trickle in.
     my $fh;
 
+    # We don't deactivate output buffering, since the PDF file can anyway only
+    # be viewed when it's fully transmitted.
+
     while(1) {
         # Read a chunk. Stop if EOF is reached.
         defined(my $pos  = unserialize(\*STDIN)) or last;
@@ -164,7 +168,7 @@ if($ARGV[1] eq "OUTPUT") {
 
     close $fh or die $!;
 } else {
-  die;
+    die;
 }
 EEKCAT
 )"
@@ -207,6 +211,8 @@ while :; do
     {
         if [ "$is_first_time" = "0" ]; then
             waitforfile "$LC_FILE.tex" >&2
+            # It's important that only the raw source data is sent to STDOUT.
+            # We don't trust inotifywait enough in this regard.
         fi
         date +%s.%N > "$LC_FILE.time"  # for printing statistics
         cat "$LC_FILE.tex"
