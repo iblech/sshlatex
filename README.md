@@ -28,7 +28,7 @@ inotify-tools package on the local side.
 
 You should use the multiplexing capabilities of ssh, so that new connections
 are piggybacked over an already established connection avoiding the TCP and
-cryptography handshake. Add the following to two lines to your local
+cryptography handshake. Add the following two lines to your local
 `~/.ssh/config`:
 
     ControlMaster auto
@@ -37,7 +37,7 @@ cryptography handshake. Add the following to two lines to your local
 
 ## Features
 
-* No installation on the remote host is necessary.
+* No installation necessary, neither on the remote host nor on the local side.
 * Images and sources included with `\includegraphics`, `\input`, and `\include`
   are automatically copied to the compile server. Accompanying `.bbl`
   files are as well.
@@ -47,9 +47,9 @@ cryptography handshake. Add the following to two lines to your local
   shaving off a couple of hundreds of milliseconds.
 * Downloading the resulting PDF file starts before each run of `pdflatex`
   has finished. Since `pdflatex` does not simply append to the output file, but
-  seeks and overwrites earlier parts, some blocks are transferred multiple times.
-  This is still faster than waiting for `pdflatex` to end and then doing a
-  proper `rsync`.
+  seeks and overwrites earlier parts, sshlatex is prepared to transfer some
+  blocks multiple times if necessary. This is still faster than waiting for
+  `pdflatex` to finish and then doing a proper `rsync`.
 * Temporary files on the server are properly cleaned up on `^C`.
 * Filenames with special characters in them are supported.
 
