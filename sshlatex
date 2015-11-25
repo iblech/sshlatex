@@ -113,6 +113,7 @@ if($ARGV[1] eq "OUTPUT") {
     while(1) {
         # Try to open the input file; don't worry if it's not there yet.
         open my $fh, "<", $file or do {
+            last if $input_file_is_complete;  # quit if we're signalized to do so
             sleep DELAY;
             next;
         };
