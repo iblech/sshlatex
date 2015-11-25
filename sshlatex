@@ -41,7 +41,7 @@ function waitforfile {
 # Cleans up the temporary files (locally and on the remote end).
 function cleanup {
     echo -n "Cleaning up... " >&2
-    rm "$LC_FILE.time"
+    rm "$LC_FILE.time" "$LC_FILE.new.pdf"
     ssh "$host" 'rm -r "$LC_TEMPDIR"'
     echo "done." >&2
 }
@@ -272,7 +272,8 @@ while :; do
 
             mv _sshlatex_header-next.tex _sshlatex_header.tex
 EOF
-    )" | perl -we "$LC_EEKCAT" "$LC_FILE.pdf" INPUT || exit
+    )" | perl -we "$LC_EEKCAT" "$LC_FILE.new.pdf" INPUT || exit
+    mv "$LC_FILE.new.pdf" "$LC_FILE.pdf"
 
     echo -n "*** Elapsed time: " >&2
     perl -we "printf '%.2f seconds', $(date +%s.%N) - $(cat "$LC_FILE.time")" >&2
