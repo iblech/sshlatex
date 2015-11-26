@@ -20,6 +20,16 @@ Optionally, put a program `beepy` in your `$PATH` (or change the corresponding
 line in the source code) to audibly inform you of a completed run. Useful for
 when you're switching virtual desktops and don't see the output of sshlatex.
 
+Tip for when you're using a lightweight PDF viewer which doesn't auto-reload on
+changes: Put something like
+
+    # Send a "r" key to all running mupdf instances.
+    for i in `xdotool search --class mupdf`; do
+      xdotool key --window $i r
+    done
+
+in your `beepy` program.
+
 
 ## Dependencies
 
