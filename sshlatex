@@ -288,3 +288,6 @@ EOF
     sleep 0.05
     is_first_time=0
 done
+
+# TODO: Withhold output of pdflatex until a new run has started, to better
+# see error messages.
