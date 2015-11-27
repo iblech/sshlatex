@@ -198,6 +198,11 @@ EEKCAT
 host="$1"
 export LC_FILE="`basename "$2" .tex`"
 
+[ -e "$LC_FILE.tex" ] || {
+    echo "Error: LaTeX source file not found. \"$LC_FILE.tex\"" >&2
+    exit 1
+}
+
 echo "Initial upload..." >&2
 export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz "$LC_FILE.tex" | ssh "$host" '
     tempdir="`mktemp -d`"
@@ -217,6 +222,10 @@ export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz "$LC_FILE.tex" |
     # Return the path of the working directory to the local host.
     echo "$tempdir"
 ')"
+if [ -z "$LC_TEMPDIR" ]; then
+    echo "Didn't get a proper server response; aborting." >&2
+    exit 1
+fi
 echo "Done." >&2
 
 # As we uploaded eekcat to the remote host, we don't have to send its
