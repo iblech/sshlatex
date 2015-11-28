@@ -12,9 +12,14 @@ function texdeps {
     echo -en "\0"
 
     perl -nwe '
-        for(/\\(?:includegraphics|input|include)(?:\[[^\]]*\])?{([^}]+)}/) {
-            for("", qw< .png .jpeg .jpg .tex .bbl >) {
-                print "$1$_\0" if -e "$1$_";
+        for my $file (/\\(?:includegraphics|input|include|documentclass)(?:\[[^\]]*\])?{([^}]+)}/) {
+            for("", qw< .png .jpeg .jpg .tex .cls .bbl >) {
+                if(-e "$file$_") {
+                    print "$file$_\0";
+
+                    # Recursively search included LaTeX source files.
+                    push @ARGV, "$file$_" if "$file$_" =~ /\.(?:tex|cls)$/;
+                }
             }
         }
     ' "$1"
