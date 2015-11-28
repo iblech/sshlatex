@@ -31,6 +31,8 @@ function waitforfiles {
 
         # Wait for the files to settle.
         my $DELAY = 0.05;
+        sleep $DELAY;
+
         LOOP: while(1) {
             for my $file (@ARGV) {
                 my $ftime = (stat $file)[9];
