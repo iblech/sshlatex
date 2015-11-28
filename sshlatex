@@ -8,6 +8,9 @@
 # Given a LaTeX source file as first argument, outputs a null-delimited list of
 # dependencies the file has.
 function texdeps {
+    echo -n "$1"
+    echo -en "\0"
+
     perl -nwe '
         for(/\\(?:includegraphics|input|include)(?:\[[^\]]*\])?{([^}]+)}/) {
             for("", qw< .png .jpeg .jpg .tex .bbl >) {
@@ -196,8 +199,12 @@ export LC_FILE="`basename "$2" .tex`"
     exit 1
 }
 
+# Invariant: The source files on the server are always as least as
+# new as recorded in $time_of_remote_files (as measured in local time).
+time_of_remote_files="`date +%s.%N`"
+
 echo "Initial upload..." >&2
-export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz "$LC_FILE.tex" | ssh "$host" '
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz | ssh "$host" '
     tempdir="`mktemp -d`"
     cd "$tempdir"
 
@@ -238,9 +245,10 @@ while :; do
             # It's important that only the raw source data is sent to STDOUT.
             # We don't trust inotifywait enough in this regard.
         fi
-        echo "Uploading changed source file..." >&2
-        date +%s.%N > "$LC_FILE.time"  # for printing statistics
-        gzip -9c "$LC_FILE.tex"
+        echo "Uploading source files..." >&2
+        date +%s.%N > "$LC_FILE.time"  # for printing statistics and for
+                                       # updating $time_of_remote_files
+        texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz
     } | ssh "$host" "$(cat <<'EOF'
             cd "$LC_TEMPDIR"
 
@@ -258,7 +266,8 @@ while :; do
                 # It's important to store the new preamble in a temporary file,
                 # as pdflatex would not be able to read the header file quicker
                 # than we'd truncate it.
-                gunzip | perl -we '
+                tar -xz || exit 1
+                perl -we '
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
                     open my $main,   ">", "_sshlatex_main.tex"        or die $!;
 
@@ -267,7 +276,7 @@ while :; do
                         print $fh $_ or die $!;
                         $fh = $main if /\\begin{document}/;
                     }
-                '
+                ' "$LC_FILE.tex"
 
                 # Check that the new preamble equals the preamble with which
                 # we've already initialized pdflatex. If not, abort pdflatex by
@@ -313,8 +322,10 @@ EOF
     ) | perl -we "$LC_EEKCAT" "$LC_FILE.new.pdf" INPUT || exit
     mv "$LC_FILE.new.pdf" "$LC_FILE.pdf" 2>/dev/null
 
+    time_of_remote_files="`cat "$LC_FILE.time"`"
+
     echo -n "*** Elapsed time: " >&2
-    perl -we "printf '%.2f seconds', $(date +%s.%N) - $(cat "$LC_FILE.time")" >&2
+    perl -we "printf '%.2f seconds', $(date +%s.%N) - $time_of_remote_files" >&2
     echo >&2
     echo >&2
     beepy &>/dev/null &

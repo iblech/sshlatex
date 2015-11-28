@@ -75,8 +75,6 @@ login credentials each time you change the LaTeX source.
 * Written in haste, will contain bugs. Is a grave assortment of hacks, the
   least of which is using the `LC_*` environment variables to pass data to the
   remote host.
-* Doesn't synchronize changes in the included images and sources. You have to
-  restart `sshlatex` to update the server's copies.
 * Not customizable.
 * Doesn't support fancy reruns of LaTeX for making sure that references are
   correct and so on. This tool is for rapidly iterating.
