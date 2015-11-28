@@ -273,13 +273,28 @@ while :; do
                         $fh = $main if /\\begin{document}/;
                     }
                 '
-                echo '\input{_sshlatex_main.tex}'
+
+                # Check that the new preamble equals the preamble with which
+                # we've already initialized pdflatex. If not, abort pdflatex by
+                # sending the "x" command and rerun.
+                if cmp -s _sshlatex_header.tex _sshlatex_header-next.tex >/dev/null; then
+                    echo '\input{_sshlatex_main.tex}'
+                else
+                    echo "Preamble change detected; aborting LaTeX and rerunning." >&2
+                    touch _sshlatex_redo
+                    echo x
+                fi
             } | pdflatex -jobname "$LC_FILE" >&2
+
+            mv _sshlatex_header-next.tex _sshlatex_header.tex
+
+            if [ -e _sshlatex_redo ]; then
+                rm _sshlatex_redo
+                echo '\input{_sshlatex_header.tex}\input{_sshlatex_main.tex}' | pdflatex -jobname "$LC_FILE" >&2
+            fi
 
             # Signalize completion of the output file to eekcat
             kill -USR1 %1
-
-            mv _sshlatex_header-next.tex _sshlatex_header.tex
 EOF
     )" | perl -we "$LC_EEKCAT" "$LC_FILE.new.pdf" INPUT || exit
     mv "$LC_FILE.new.pdf" "$LC_FILE.pdf" 2>/dev/null
