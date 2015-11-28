@@ -280,16 +280,19 @@ while :; do
                     echo x
                 fi
             } | pdflatex -jobname "$LC_FILE" >&2
+            exitstatus="$?"
 
             mv _sshlatex_header-next.tex _sshlatex_header.tex
 
             if [ -e _sshlatex_redo ]; then
                 rm _sshlatex_redo
                 echo '\input{_sshlatex_header.tex}\input{_sshlatex_main.tex}' | pdflatex -jobname "$LC_FILE" >&2
+                exitstatus="$?"
             fi
 
             # Signalize completion of the output file to eekcat
             kill -USR1 %1
+            exit "$exitstatus"
 EOF
     )" 2> >(
         perl -we '
@@ -311,7 +314,12 @@ EOF
             print while <>;
         ' >&2
     ) | perl -we "$LC_EEKCAT" "$LC_FILE.new.pdf" INPUT || exit
-    mv "$LC_FILE.new.pdf" "$LC_FILE.pdf" 2>/dev/null
+
+    if [ "${PIPESTATUS[-2]}" = "0" ]; then
+        mv "$LC_FILE.new.pdf" "$LC_FILE.pdf" 2>/dev/null
+    else
+        echo "*** An error occured." >&2
+    fi
 
     echo -n "*** Elapsed time: " >&2
     perl -we "printf '%.2f seconds', $(date +%s.%N) - $(cat "$LC_FILE.time")" >&2
