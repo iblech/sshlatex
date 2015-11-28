@@ -70,6 +70,24 @@ not only nice to have, but absolutely crucial, as else you'd be forced to enter
 login credentials each time you change the LaTeX source.
 
 
+## Security considerations
+
+Essentially, don't run sshlatex on untrusted files or with untrusted servers.
+Specifically:
+
+* sshlatex places several files, including LaTeX source files, in a temporary
+  directory on the server side. This might leak data or metadata (for instance
+  on when you are working on your LaTeX documents). You can change the location
+  of the temporary directory by arranging an appropriate value of `$TMPDIR` on
+  the remote end.
+* sshlatex happily uploads any included files to the server, even files
+  outside the base directory (as for instance prompted by
+  `\includegraphics{/etc/passwd}`).
+* When downloading the resulting PDF file, sshlatex accepts any data from the
+  server. This could be exploited by an attacker for a denial of service
+  attack by filling the memory or disk.
+
+
 ## Shortcomings
 
 * Written in haste, will contain bugs. Is a grave assortment of hacks, the
