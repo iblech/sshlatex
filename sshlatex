@@ -23,22 +23,25 @@ function texdeps {
     [ -e "$bbl" ] && { echo -n "$bbl"; echo -en "\0"; }
 }
 
-# Waits for the file given in the first argument to change.
-function waitforfile {
-    inotifywait -qq -e close_write "$1"
+# Waits for the file given in the first argument (and its dependencies) to
+# change.
+function waitforfiles {
+    texdeps "$1" | xargs -0 perl -MTime::HiRes=sleep,time,stat -we '
+        system qw< inotifywait -qq -e close_write >, @ARGV;
 
-    # Wait for the file to settle.
-    perl -MTime::HiRes=sleep,time,stat -we '
+        # Wait for the files to settle.
         my $DELAY = 0.05;
-        while(1) {
-            my $ftime = (stat $ARGV[0])[9];
-            if(time() - $ftime < $DELAY) {
-                sleep $DELAY;
-            } else {
-                exit;
+        LOOP: while(1) {
+            for my $file (@ARGV) {
+                my $ftime = (stat $file)[9];
+                if(time() - $ftime < $DELAY) {
+                    sleep $DELAY;
+                    next LOOP;
+                }
             }
+            last;
         }
-    ' "$1"
+    '
 }
 
 # Cleans up the temporary files (locally and on the remote end).
@@ -241,7 +244,7 @@ while :; do
     # Meanwhile, prestart pdflatex with the preamble of the last run.
     {
         if [ "$is_first_time" = "0" ]; then
-            waitforfile "$LC_FILE.tex" >&2
+            waitforfiles "$LC_FILE.tex" >&2
             # It's important that only the raw source data is sent to STDOUT.
             # We don't trust inotifywait enough in this regard.
         fi
