@@ -162,10 +162,7 @@ if($ARGV[1] eq "OUTPUT") {
         sleep DELAY;
     }
 } elsif($ARGV[1] eq "INPUT") {
-    # Variable to contain the output file handle. We don't open the output file
-    # just yet, because we don't want to clobber it while we're still waiting
-    # on the first data to trickle in.
-    my $fh;
+    open my $fh, ">", $file or die $!;
 
     # We don't deactivate output buffering, since the PDF file can anyway only
     # be viewed when it's fully transmitted.
@@ -175,7 +172,6 @@ if($ARGV[1] eq "OUTPUT") {
         defined(my $pos  = unserialize(\*STDIN)) or last;
         defined(my $data = unserialize(\*STDIN)) or die;
 
-        open $fh, ">", $file or die $! unless defined $fh;
         seek $fh, $pos, 0 or die $!;
 
         if(length $data == 0) {  # EOF was signalized
@@ -185,10 +181,7 @@ if($ARGV[1] eq "OUTPUT") {
         }
     }
 
-    close $fh or die $! if $fh;
-    # It can actually happen that $fh is still undefined at this point.
-    # For instance, this is the case when the pipe was broken before any data
-    # could be transmitted.
+    close $fh or die $!;
 } else {
     die;
 }
@@ -255,6 +248,8 @@ while :; do
             rm "$LC_FILE.pdf" 2>/dev/null
             perl eekcat.pl "$LC_FILE.pdf" OUTPUT &
 
+            echo "Ready on the remote side..." >&2
+
             {
                 # Use the preamble of the last run.
                 echo '\input{_sshlatex_header.tex}'
@@ -296,7 +291,26 @@ while :; do
             # Signalize completion of the output file to eekcat
             kill -USR1 %1
 EOF
-    )" | perl -we "$LC_EEKCAT" "$LC_FILE.new.pdf" INPUT || exit
+    )" 2> >(
+        perl -we '
+            my @buf;
+
+            $|++;
+            print scalar <>;  # output first line immediately
+
+            # Buffer the other status lines of pdflatex until we are uploading
+            # the changed source file.
+            while(<>) {
+                push @buf, $_;
+                last if -e "$ENV{LC_FILE}.time";
+            }
+
+            exit unless -e "$ENV{LC_FILE}.new.pdf";
+
+            print @buf;
+            print while <>;
+        ' >&2
+    ) | perl -we "$LC_EEKCAT" "$LC_FILE.new.pdf" INPUT || exit
     mv "$LC_FILE.new.pdf" "$LC_FILE.pdf" 2>/dev/null
 
     echo -n "*** Elapsed time: " >&2
@@ -312,6 +326,3 @@ EOF
     sleep 0.05
     is_first_time=0
 done
-
-# TODO: Withhold output of pdflatex until a new run has started, to better
-# see error messages.
