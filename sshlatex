@@ -48,7 +48,7 @@ function waitforfiles {
 
 # Cleans up the temporary files (locally and on the remote end).
 function cleanup {
-    echo -n "Cleaning up... " >&2
+    echo -n "*** Cleaning up... " >&2
     rm "$LC_FILE.time" "$LC_FILE.new.pdf" 2>/dev/null
     ssh "$host" 'rm -r "$LC_TEMPDIR"'
     echo "done." >&2
@@ -200,7 +200,7 @@ host="$1"
 export LC_FILE="`basename "$2" .tex`"
 
 [ -e "$LC_FILE.tex" ] || {
-    echo "Error: LaTeX source file not found. \"$LC_FILE.tex\"" >&2
+    echo "*** Error: LaTeX source file not found. \"$LC_FILE.tex\"" >&2
     exit 1
 }
 
@@ -208,7 +208,7 @@ export LC_FILE="`basename "$2" .tex`"
 # new as recorded in $time_of_remote_files (as measured in local time).
 time_of_remote_files="`date +%s.%N`"
 
-echo "Initial upload..." >&2
+echo "*** Initial upload..." >&2
 export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz | ssh "$host" '
     tempdir="`mktemp -d`"
     cd "$tempdir"
@@ -232,6 +232,7 @@ if [ -z "$LC_TEMPDIR" ]; then
     exit 1
 fi
 echo "Done." >&2
+echo >&2
 
 # As we uploaded eekcat to the remote host, we don't have to send its
 # source code with every further ssh invocation.
@@ -242,6 +243,11 @@ trap cleanup EXIT
 is_first_time=1
 
 while :; do
+    [ -e "$LC_FILE.tex" ] || {
+        echo "*** Error: The LaTeX source file vanished. \"$LC_FILE.tex\"" >&2
+        exit 1
+    }
+
     # Wait for changes in the source file and push them to the remote.
     # Meanwhile, prestart pdflatex with the preamble of the last run.
     {
@@ -250,7 +256,7 @@ while :; do
             # It's important that only the raw source data is sent to STDOUT.
             # We don't trust inotifywait enough in this regard.
         fi
-        echo "Uploading source files..." >&2
+        echo "*** Uploading source files..." >&2
         date +%s.%N > "$LC_FILE.time"  # for printing statistics and for
                                        # updating $time_of_remote_files
         texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz
@@ -261,7 +267,7 @@ while :; do
             rm "$LC_FILE.pdf" 2>/dev/null
             perl eekcat.pl "$LC_FILE.pdf" OUTPUT &
 
-            echo "Ready on the remote side..." >&2
+            echo "*** Ready on the remote side..." >&2
 
             {
                 # Use the preamble of the last run.
@@ -289,7 +295,7 @@ while :; do
                 if cmp -s _sshlatex_header.tex _sshlatex_header-next.tex >/dev/null; then
                     echo '\input{_sshlatex_main.tex}'
                 else
-                    echo "Preamble change detected; aborting LaTeX and rerunning." >&2
+                    echo "*** Preamble change detected; aborting LaTeX and rerunning." >&2
                     touch _sshlatex_redo
                     echo x
                 fi
@@ -316,7 +322,7 @@ EOF
             print scalar <>;  # output first line immediately
 
             # Buffer the other status lines of pdflatex until we are uploading
-            # the changed source file.
+            # the changed source file, to not clutter the console.
             while(<>) {
                 push @buf, $_;
                 last if -e "$ENV{LC_FILE}.time";
