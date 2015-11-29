@@ -262,8 +262,13 @@ while :; do
             # We don't trust inotifywait enough in this regard.
         fi
         echo "*** Uploading source files..." >&2
-        date +%s.%N > "$LC_FILE.time"  # for printing statistics and for
-                                       # updating $time_of_remote_files
+        touch "$LC_FILE.new.pdf"  # to ensure that the logic for withholding
+                                  # the pdflatex log output (triggered by
+                                  # creating $LC_FILE.time) doesn't abort early
+        date +%s.%N > "$LC_FILE.time"  # for printing statistics,
+                                       # for updating $time_of_remote_files, and
+                                       # for triggering the un-withholding of
+                                       # the pdflatex log output
         texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz
     } | ssh "$host" "$(cat <<'EOF'
             cd "$LC_TEMPDIR"
