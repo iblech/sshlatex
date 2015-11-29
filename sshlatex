@@ -325,19 +325,26 @@ while :; do
             exit "$exitstatus"
 EOF
     )" 2> >(
+        # This redirection is because we do not want to see the status messages
+        # from pdflatex right away (they clutter the screen, in particular they
+        # clutter possible error messages from the previous run). We only want
+        # to see them when a changed source file was uploaded.
         perl -we '
             my @buf;
 
             $|++;
-            print scalar <>;  # output first line immediately
+            print scalar <>;  # output first line ("Ready on the remote side") immediately
 
             # Buffer the other status lines of pdflatex until we are uploading
             # the changed source file, to not clutter the console.
             while(<>) {
                 push @buf, $_;
-                last if -e "$ENV{LC_FILE}.time";
+                last if -e "$ENV{LC_FILE}.time";  # upload has started
             }
 
+            # If sshlatex is aborted with ^C, we do not want to see the (no
+            # longer relevant) status messages from the current run of pdflatex
+            # (already initialized with the preamble).
             exit unless -e "$ENV{LC_FILE}.new.pdf";
 
             print @buf;
@@ -360,8 +367,7 @@ EOF
     beepy &>/dev/null &
 
     rm "$LC_FILE.time" 2>/dev/null
-    # will be deleted at the final cleanup anyway, but it also shouldn't
-    # clutter the directory in the meanwhile
+    # is used to trigger un-withholding of pdflatex log output, so has to be reset
 
     sleep 0.05
     is_first_time=0

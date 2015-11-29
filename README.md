@@ -23,14 +23,12 @@ when you're switching virtual desktops and don't see the output of sshlatex.
 See below for when you don't have passphrase-less login to the remote end set up.
 
 Tip for when you're using a lightweight PDF viewer which doesn't auto-reload on
-changes: Put something like
+changes: Put something like the following in your `beepy` program.
 
     # Send the "r" key to all running mupdf instances.
     for i in `xdotool search --class mupdf`; do
       xdotool key --window $i r
     done
-
-in your `beepy` program.
 
 
 ## Features
@@ -65,7 +63,7 @@ cryptography handshake. Add the following two lines to your local
     ControlMaster auto
     ControlPath ~/.ssh/control:%h:%p:%r
 
-If you don't have passphrase-less login to the remote end set up, this is
+If you don't have passphrase-less login to the remote end set up, ssh multiplexing is
 not only nice to have, but absolutely crucial, as else you'd be forced to enter
 login credentials each time you change the LaTeX source.
 
