@@ -58,14 +58,14 @@ inotify-tools package on the local side.
 You should use the multiplexing capabilities of ssh, so that new connections
 are piggybacked over an already established connection avoiding the TCP and
 cryptography handshake. Add the following two lines to your local
-`~/.ssh/config`:
+`~/.ssh/config` and open a separate SSH connection before you start sshlatex.
 
     ControlMaster auto
     ControlPath ~/.ssh/control:%h:%p:%r
 
-If you don't have passphrase-less login to the remote end set up, ssh multiplexing is
+_If you don't have passphrase-less login to the remote end set up, ssh multiplexing is
 not only nice to have, but absolutely crucial, as else you'd be forced to enter
-login credentials each time you change the LaTeX source.
+login credentials each time you change the LaTeX source._
 
 
 ## Security considerations
