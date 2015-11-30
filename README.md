@@ -27,7 +27,7 @@ changes: Put something like the following in your `beepy` program.
 
     # Send the "r" key to all running mupdf instances.
     for i in `xdotool search --class mupdf`; do
-      xdotool key --window $i r
+        xdotool key --window $i r
     done
 
 
