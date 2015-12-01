@@ -150,7 +150,7 @@ if($ARGV[1] eq "OUTPUT") {
             my $hex = md5($data);
             if(not defined $blocks{$pos} or $blocks{$pos} ne $hex) {
                 $blocks{$pos} = $hex;
-                print serialize($pos), serialize($data);  # stream block to STDOUT
+                print serialize($pos), serialize($data) or die $!;  # stream block to STDOUT
             }
         } continue {
             $pos += $len;
@@ -159,7 +159,7 @@ if($ARGV[1] eq "OUTPUT") {
         close $fh or die $!;
 
         if($stop_after_this_run) {
-            print serialize($pos), serialize("");  # signalize EOF
+            print serialize($pos), serialize("") or die $!;  # signalize EOF
             last;
         }
 
@@ -171,9 +171,11 @@ if($ARGV[1] eq "OUTPUT") {
             next;  # we may skip the DELAY, since the file is fully written
         }
 
-        $fh->flush();
+        STDOUT->flush() or die $!;
         sleep DELAY;
     }
+
+    STDOUT->flush() or die $!;
 } elsif($ARGV[1] eq "INPUT") {
     open my $fh, ">", $file or die $!;
 
