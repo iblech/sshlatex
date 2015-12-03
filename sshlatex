@@ -24,6 +24,8 @@ function texdeps {
         }
     ' "$1"
 
+    find minted -print0 2>/dev/null
+
     bbl="`basename "$1" .tex`.bbl"
     [ -e "$bbl" ] && { echo -n "$bbl"; echo -en "\0"; }
 }
@@ -275,6 +277,8 @@ while :; do
     } | ssh "$host" "$(cat <<'EOF'
             cd "$LC_TEMPDIR"
 
+            export TEXINPUTS=minted/source:
+
             # Start streaming the output file.
             rm "$LC_FILE.pdf" 2>/dev/null
             perl eekcat.pl "$LC_FILE.pdf" OUTPUT &
@@ -311,14 +315,14 @@ while :; do
                     touch _sshlatex_redo
                     echo x
                 fi
-            } | pdflatex -jobname "$LC_FILE" >&2
+            } | pdflatex -shell-escape -jobname "$LC_FILE" >&2
             exitstatus="$?"
 
             mv _sshlatex_header-next.tex _sshlatex_header.tex
 
             if [ -e _sshlatex_redo ]; then
                 rm _sshlatex_redo
-                echo '\input{_sshlatex_header.tex}\input{_sshlatex_main.tex}' | pdflatex -jobname "$LC_FILE" >&2
+                echo '\input{_sshlatex_header.tex}\input{_sshlatex_main.tex}' | pdflatex -shell-escape -jobname "$LC_FILE" >&2
                 exitstatus="$?"
             fi
 
