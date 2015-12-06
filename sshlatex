@@ -6,7 +6,7 @@
 # by ssh. Yes, this is one of many hacks in this tool.
 
 # Given a LaTeX source file as first argument, outputs a null-delimited list of
-# dependencies the file has.
+# dependencies the file has. The file itself is included as well.
 function texdeps {
     echo -n "$1"
     echo -en "\0"
@@ -31,11 +31,26 @@ function texdeps {
 # Waits for the file given in the first argument (and its dependencies) to
 # change.
 function waitforfiles {
-    texdeps "$1" | xargs -0 perl -MTime::HiRes=sleep,time,stat -we '
-        system qw< inotifywait -qq -e close_write >, @ARGV;
+    texdeps "$1" | HAVE_INOTIFYWAIT="`which inotifywait`" xargs -0 perl -MTime::HiRes=sleep,time,stat -we '
+        my $DELAY = 0.05;
+
+        if($ENV{HAVE_INOTIFYWAIT}) {
+            system qw< inotifywait -qq -e close_write >, @ARGV;
+        } else {
+            print STDERR "*** inotifywait not found; falling back to polling...\n";
+            my $start = time();
+            WAIT_FOR_CHANGES: while(1) {
+                sleep $DELAY;
+                for my $file (@ARGV) {
+                    my $ftime = (stat $file)[9];
+                    if($ftime > $start) {
+                        last WAIT_FOR_CHANGES;
+                    }
+                }
+            }
+        }
 
         # Wait for the files to settle.
-        my $DELAY = 0.05;
         sleep $DELAY;
 
         LOOP: while(1) {

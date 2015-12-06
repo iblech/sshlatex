@@ -52,8 +52,11 @@ changes: Put something like the following in your `beepy` program.
 
 ## Dependencies
 
-None on the remote host (well, LaTeX and Perl 5), inotifywait from the
-inotify-tools package on the local side.
+Aside from standard Linux tools and Perl 5 (included in the base installation of
+practically any Linux distribution), sshlatex has no dependencies on the local
+host and only LaTeX on the remote host. If inotifywait from the inotify-tools
+package is installed on the local side, sshlatex will use it instead of
+resorting to polling for detecting changes in the source files.
 
 You should use the multiplexing capabilities of ssh, so that new connections
 are piggybacked over an already established connection avoiding the TCP and
