@@ -6,7 +6,7 @@ tool which monitors your source file for changes, copies it to a fast remote
 server, runs LaTeX there, and downloads the resulting PDF file?
 
 Then look no further. Actually, you should; this repository is a collection of
-horrible hacks to make this possible. It works for me.
+horrible hacks to make this possible. They work for me.
 
 
 ## Usage
@@ -66,6 +66,12 @@ cryptography handshake. Add the following two lines to your local
 _If you don't have passphrase-less login to the remote end set up, ssh multiplexing is
 not only nice to have, but absolutely crucial, as else you'd be forced to enter
 login credentials each time you change the LaTeX source._
+
+
+## Purely local usage
+
+Because of the pre-start feature, sshlatex can even make sense if you run it
+purely locally. Call `sshlatex localhost foo.tex`.
 
 
 ## Security considerations
