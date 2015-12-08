@@ -13,7 +13,7 @@ function texdeps {
 
     perl -nwe '
         for my $file (/\\(?:includegraphics|input|include|documentclass)(?:\[[^\]]*\])?{([^}]+)}/) {
-            for("", qw< .png .jpeg .jpg .tex .cls .bbl >) {
+            for("", qw< .png .jpeg .jpg .pdf .tex .cls .bbl >) {
                 if(-e "$file$_") {
                     print "$file$_\0";
 
