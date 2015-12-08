@@ -221,6 +221,11 @@ EEKCAT
 host="$1"
 export LC_FILE="`basename "$2" .tex`"
 
+[ -n "$1" -a -n "$2" ] || {
+    echo "Usage: sshlatex ssh.example.org foo.tex" >&2
+    exit 1
+}
+
 [ -e "$LC_FILE.tex" ] || {
     echo "*** Error: LaTeX source file not found. \"$LC_FILE.tex\"" >&2
     exit 1
