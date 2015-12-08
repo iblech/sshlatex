@@ -84,7 +84,8 @@ Specifically:
 
 * sshlatex places several files, including LaTeX source files, in a temporary
   directory on the server side. This might leak data or metadata (for instance
-  on when you are working on your LaTeX documents). You can change the location
+  on when you are working on your LaTeX documents) to the administrator or
+  other users on the server. You can change the location
   of the temporary directory by arranging an appropriate value of `$TMPDIR` on
   the remote end.
 * sshlatex happily uploads any included files to the server, even files
