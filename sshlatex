@@ -5,27 +5,46 @@
 # we employ the LC_* environment variables. These are automatically transmitted
 # by ssh. Yes, this is one of many hacks in this tool.
 
+# Recall that using "echo -n ..." is not necessarily safe (robust), if ...
+# happens to look like an option. This function is a safe substitute. It's only
+# necessary because echo doesn't respect the usual convention of two dashes (--)
+# separating options from other arguments.
+function safeechon {
+    perl -we 'print $ARGV[0]' -- "$1"
+}
+
 # Given a LaTeX source file as first argument, outputs a null-delimited list of
 # dependencies the file has. The file itself is included as well.
 function texdeps {
-    echo -n "$1"
+    safeechon "$1"
     echo -en "\0"
 
-    perl -nwe '
-        for my $file (/\\(?:includegraphics|input|include|documentclass)(?:\[[^\]]*\])?{([^}]+)}/) {
-            for("", qw< .png .jpeg .jpg .pdf .tex .cls .bbl >) {
-                if(-e "$file$_") {
-                    print "$file$_\0";
+    perl -we '
+        my @files = ($ARGV[0]);
 
-                    # Recursively search included LaTeX source files.
-                    push @ARGV, "$file$_" if "$file$_" =~ /\.(?:tex|cls)$/;
+        # We do not use the usual while(<>) idiom (and @ARGV) because that is
+        # not special-character-safe. The safe substitute operator <<>>
+        # is only available from Perl 5.22 on, which we do not want to depend on.
+        while(@files) {
+            open my $fh, "<", shift(@files) or next;
+            while(defined(my $line = <$fh>)) {
+                for my $dep ($line =~ /\\(?:includegraphics|input|include|documentclass)(?:\[[^\]]*\])?{([^}]+)}/) {
+                    for("", qw< .png .jpeg .jpg .pdf .tex .cls .bbl >) {
+                        if(-e "$dep$_") {
+                            print "$dep$_\0";
+
+                            # Recursively search included LaTeX source files.
+                            push @files, "$dep$_" if "$dep$_" =~ /\.(?:tex|cls)$/;
+                        }
+                    }
                 }
             }
+            close $fh or die $!;
         }
-    ' "$1"
+    ' -- "$1"
 
-    bbl="`basename "$1" .tex`.bbl"
-    [ -e "$bbl" ] && { echo -n "$bbl"; echo -en "\0"; }
+    bbl="`basename -- "$1" .tex`.bbl"
+    [ -e "$bbl" ] && { safeechon "$bbl"; echo -en "\0"; }
 }
 
 # Waits for the file given in the first argument (and its dependencies) to
@@ -35,7 +54,7 @@ function waitforfiles {
         my $DELAY = 0.05;
 
         if($ENV{HAVE_INOTIFYWAIT}) {
-            system qw< inotifywait -qq -e close_write >, @ARGV;
+            system qw< inotifywait -qq -e close_write -- >, @ARGV;
         } else {
             print STDERR "*** inotifywait not found; falling back to polling...\n";
             my $start = time();
@@ -69,7 +88,7 @@ function waitforfiles {
 # Cleans up the temporary files (locally and on the remote end).
 function cleanup {
     echo -n "*** Cleaning up... " >&2
-    rm "$LC_FILE.time" "$LC_FILE.new.pdf" 2>/dev/null
+    rm -- "$LC_FILE.time" "$LC_FILE.new.pdf" 2>/dev/null
     ssh "$host" 'rm -r "$LC_TEMPDIR"'
     echo "done." >&2
 }
@@ -219,7 +238,7 @@ EEKCAT
 )"
 
 host="$1"
-export LC_FILE="`basename "$2" .tex`"
+export LC_FILE="`basename -- "$2" .tex`"
 
 [ -n "$1" -a -n "$2" ] || {
     echo "Usage: sshlatex ssh.example.org foo.tex" >&2
@@ -236,7 +255,7 @@ export LC_FILE="`basename "$2" .tex`"
 time_of_remote_files="`date +%s.%N`"
 
 echo "*** Initial upload..." >&2
-export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz | ssh "$host" '
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz -- | ssh "$host" '
     tempdir="`mktemp -d`"
     cd "$tempdir"
 
@@ -249,7 +268,7 @@ export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz | ssh "$host" '
     # _sshlatex_header.tex instead of _sshlatex_main.tex. This way pdflatex
     # will do more initialization while we are waiting for the changed source
     # to arrive.
-    perl -nwe "print; last if /\\\\begin{document}/" "$LC_FILE.tex" > _sshlatex_header.tex
+    perl -nwe "print; last if /\\\\begin{document}/" -- "$LC_FILE.tex" > _sshlatex_header.tex
 
     # Return the path of the working directory to the local host.
     echo "$tempdir"
@@ -284,19 +303,19 @@ while :; do
             # We don't trust inotifywait enough in this regard.
         fi
         echo "*** Uploading source files..." >&2
-        touch "$LC_FILE.new.pdf"  # to ensure that the logic for withholding
-                                  # the pdflatex log output (triggered by
-                                  # creating $LC_FILE.time) doesn't abort early
+        touch -- "$LC_FILE.new.pdf"  # to ensure that the logic for withholding
+                                     # the pdflatex log output (triggered by
+                                     # creating $LC_FILE.time) doesn't abort early
         date +%s.%N > "$LC_FILE.time"  # for printing statistics,
                                        # for updating $time_of_remote_files, and
                                        # for triggering the un-withholding of
                                        # the pdflatex log output
-        texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz
+        texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz --
     } | ssh "$host" "$(cat <<'EOF'
             cd "$LC_TEMPDIR"
 
             # Start streaming the output file.
-            rm "$LC_FILE.pdf" 2>/dev/null
+            rm -- "$LC_FILE.pdf" 2>/dev/null
             perl eekcat.pl "$LC_FILE.pdf" OUTPUT &
 
             echo "*** Ready on the remote side..." >&2
@@ -380,12 +399,12 @@ EOF
     ) | perl -we "$LC_EEKCAT" "$LC_FILE.new.pdf" INPUT || exit
 
     if [ "${PIPESTATUS[-2]}" = "0" ]; then
-        mv "$LC_FILE.new.pdf" "$LC_FILE.pdf" 2>/dev/null
+        mv -- "$LC_FILE.new.pdf" "$LC_FILE.pdf" 2>/dev/null
     else
         echo "*** An error occured." >&2
     fi
 
-    time_of_remote_files="`cat "$LC_FILE.time"`"
+    time_of_remote_files="`cat -- "$LC_FILE.time"`"
 
     echo -n "*** Elapsed time: " >&2
     perl -we "printf '%.2f seconds', $(date +%s.%N) - $time_of_remote_files" >&2
@@ -393,7 +412,7 @@ EOF
     echo >&2
     beepy &>/dev/null &
 
-    rm "$LC_FILE.time" 2>/dev/null
+    rm -- "$LC_FILE.time" 2>/dev/null
     # is used to trigger un-withholding of pdflatex log output, so has to be reset
 
     sleep 0.05
