@@ -62,6 +62,7 @@ function waitforfiles {
                 sleep $DELAY;
                 for my $file (@ARGV) {
                     my $ftime = (stat $file)[9];
+                    next unless $ftime;  # if file vanished
                     if($ftime > $start) {
                         last WAIT_FOR_CHANGES;
                     }
@@ -75,6 +76,7 @@ function waitforfiles {
         LOOP: while(1) {
             for my $file (@ARGV) {
                 my $ftime = (stat $file)[9];
+                next unless $ftime;
                 if(time() - $ftime < $DELAY) {
                     sleep $DELAY;
                     next LOOP;
