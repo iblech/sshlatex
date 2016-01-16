@@ -297,7 +297,7 @@ while :; do
     }
 
     # Wait for changes in the source file and push them to the remote.
-    # Meanwhile, prestart pdflatex with the preamble of the last run.
+    # Meanwhile, prestart pdflatex with the preamble of the previous run.
     {
         if [ "$is_first_time" = "0" ]; then
             waitforfiles "$LC_FILE.tex" >&2
@@ -323,7 +323,7 @@ while :; do
             echo "*** Ready on the remote side..." >&2
 
             {
-                # Use the preamble of the last run.
+                # Use the preamble of the previous run.
                 echo '\input{_sshlatex_header.tex}'
 
                 # Then wait for the updated main part to trickle in.

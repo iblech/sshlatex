@@ -1,12 +1,14 @@
-# sshlatex
-A collection of hacks to efficiently run LaTeX via ssh
+# sshlatex: A collection of hacks to efficiently run LaTeX via ssh
 
 Tired of long LaTeX compile times on your old, slow computer? Do you want a
 tool which monitors your source file for changes, copies it to a fast remote
 server, runs LaTeX there, and downloads the resulting PDF file?
 
 Then look no further. Actually, you should; this repository is a collection of
-horrible hacks to make this possible. They work for me.
+horrible hacks to make this possible. They work for me. Highlights are that
+sshlatex prestarts LaTeX on the server with the previous run's preamble to
+preload all those required LaTeX packages and that it starts streaming the PDF
+file before LaTeX finishes creating it.
 
 
 ## Usage
@@ -38,7 +40,7 @@ changes: Put something like the following in your `beepy` program.
   are automatically copied to the compile server. Accompanying `.bbl`
   files are as well.
 * Even before the source file is changed, LaTeX gets already started on the
-  remote host with the preamble of the last run. This way all the required
+  remote host with the preamble of the previous run. This way all the required
   packages are already loaded when the new version is ready to be compiled,
   shaving off a couple of hundreds of milliseconds.
 * Downloading the resulting PDF file starts before each run of `pdflatex`
@@ -59,9 +61,10 @@ package is installed on the local side, sshlatex will use it instead of
 resorting to polling for detecting changes in the source files.
 
 You should use the multiplexing capabilities of ssh, so that new connections
-are piggybacked over an already established connection avoiding the TCP and
-cryptography handshake. Add the following two lines to your local
-`~/.ssh/config` and open a separate SSH connection before you start sshlatex.
+are piggybacked over an already established connection avoiding the
+time-consuming TCP and cryptography handshake. Add the following two lines to
+your local `~/.ssh/config` and open a separate SSH connection before you start
+sshlatex.
 
     ControlMaster auto
     ControlPath ~/.ssh/control:%h:%p:%r
@@ -73,7 +76,7 @@ login credentials each time you change the LaTeX source._
 
 ## Purely local usage
 
-Because of the pre-start feature, sshlatex can even make sense if you run it
+Because of the prestart feature, sshlatex can even make sense if you run it
 purely locally. Call `sshlatex localhost foo.tex`.
 
 
@@ -89,8 +92,8 @@ Specifically:
   of the temporary directory by arranging an appropriate value of `$TMPDIR` on
   the remote end.
 * sshlatex happily uploads any included files to the server, even files
-  outside the base directory (as for instance prompted by
-  `\includegraphics{/etc/passwd}`).
+  outside the base directory (as for instance prompted by a command like
+  `\includegraphics{/etc/passwd}` in the LaTeX source file).
 * When downloading the resulting PDF file, sshlatex accepts any data from the
   server. This could be exploited by an attacker for a denial of service
   attack by filling the memory or disk.
