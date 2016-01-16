@@ -423,3 +423,9 @@ EOF
     sleep 0.05
     is_first_time=0
 done
+
+
+# Ideas for future enhancements:
+# * Use deduplication to more efficiently stream the PDF file
+# * Opportunistically run LaTeX up to approximately the point where the
+#   previous change occured
