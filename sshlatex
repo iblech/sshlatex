@@ -342,6 +342,8 @@ while :; do
                     }
                 ' -- "$LC_FILE.tex"
 
+                date +%s.%N > _sshlatex_compilation.time
+
                 # Check that the new preamble equals the preamble with which
                 # we've already initialized pdflatex. If not, abort pdflatex by
                 # sending the "x" command and rerun.
@@ -365,6 +367,7 @@ while :; do
 
             # Signalize completion of the output file to eekcat
             kill -USR1 %1
+            perl -we "printf \"*** LaTeX compilation time: %.2f seconds\\n\", $(date +%s.%N) - $(cat _sshlatex_compilation.time)" >&2
             exit "$exitstatus"
 EOF
     )" 2> >(
@@ -408,7 +411,7 @@ EOF
 
     time_of_remote_files="`cat -- "$LC_FILE.time"`"
 
-    echo -n "*** Elapsed time: " >&2
+    echo -n "*** Total elapsed time:     " >&2
     perl -we "printf '%.2f seconds', $(date +%s.%N) - $time_of_remote_files" >&2
     echo >&2
     echo >&2
