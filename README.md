@@ -10,6 +10,8 @@ sshlatex prestarts LaTeX on the server with the previous run's preamble to
 preload all those required LaTeX packages and that it starts streaming the PDF
 file before LaTeX finishes creating it.
 
+[![demo](asciicast.gif)](https://asciinema.org/a/36010?autoplay=1)
+
 
 ## Usage
 
