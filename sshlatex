@@ -313,7 +313,7 @@ while :; do
                                        # for triggering the un-withholding of
                                        # the pdflatex log output
         texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz --
-    } | ssh "$host" "$(cat <<'EOF'
+    } | LC_IS_FIRST_TIME="$is_first_time" ssh "$host" "$(cat <<'EOF'
             cd "$LC_TEMPDIR"
 
             # Start streaming the output file.
@@ -367,7 +367,11 @@ while :; do
 
             # Signalize completion of the output file to eekcat
             kill -USR1 %1
-            perl -we "printf \"*** LaTeX compilation time: %.2f seconds\\n\", $(date +%s.%N) - $(cat _sshlatex_compilation.time)" >&2
+            if [ "$LC_IS_FIRST_TIME" = "0" ]; then
+                perl -we "printf \"*** LaTeX compilation time: %.2f seconds (not including prelude compilation)\\n\", $(date +%s.%N) - $(cat _sshlatex_compilation.time)" >&2
+            else
+                perl -we "printf \"*** LaTeX compilation time: %.2f seconds\\n\", $(date +%s.%N) - $(cat _sshlatex_compilation.time)" >&2
+            fi
             exit "$exitstatus"
 EOF
     )" 2> >(
