@@ -52,6 +52,8 @@ changes: Put something like the following in your `beepy` program.
   `pdflatex` to finish and then doing a proper `rsync`.
 * Temporary files on the server are properly cleaned up on `^C`.
 * Filenames with special characters in them are supported.
+* Proper care is taken to ensure that shell commands directed at the remote
+  host are interpreted by the bash, even if a different shell is the default.
 
 
 ## Dependencies

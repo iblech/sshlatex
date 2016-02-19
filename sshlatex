@@ -5,6 +5,17 @@
 # we employ the LC_* environment variables. These are automatically transmitted
 # by ssh. Yes, this is one of many hacks in this tool.
 
+# Also note that the default shell on the remote server might not be the bash.
+# Therefore we use the following slightly tedious idiom:
+#
+#    ssh ssh.example.org "$(cat <<'EOF'
+#        bash -c '
+#            # ... bash source code here ...
+#            # Single quotes have to be written in the following way: '\''
+#        '
+#    EOF
+#    )"
+
 # Recall that using "echo -n ..." is not necessarily safe (robust), if "..."
 # happens to look like an option. This function is a safe substitute. It's only
 # necessary because echo doesn't respect the usual convention of two dashes (--)
@@ -257,7 +268,8 @@ export LC_FILE="`basename -- "$2" .tex`"
 time_of_remote_files="`date +%s.%N`"
 
 echo "*** Initial upload..." >&2
-export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz -- | ssh "$host" '
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz -- | ssh "$host" "$(cat <<'EOF'
+bash -c '
     tempdir="`mktemp -d`"
     cd "$tempdir"
 
@@ -274,7 +286,9 @@ export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz -- | ssh "$host"
 
     # Return the path of the working directory to the local host.
     echo "$tempdir"
-')"
+'
+EOF
+)")"
 if [ -z "$LC_TEMPDIR" ]; then
     echo "Didn't get a proper server response; aborting." >&2
     exit 1
@@ -314,6 +328,7 @@ while :; do
                                        # the pdflatex log output
         texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz --
     } | LC_IS_FIRST_TIME="$is_first_time" ssh "$host" "$(cat <<'EOF'
+        bash -c '
             cd "$LC_TEMPDIR"
 
             # Start streaming the output file.
@@ -324,14 +339,14 @@ while :; do
 
             {
                 # Use the preamble of the previous run.
-                echo '\input{_sshlatex_header.tex}'
+                echo "\input{_sshlatex_header.tex}"
 
                 # Then wait for the updated main part to trickle in.
-                # It's important to store the new preamble in a temporary file,
+                # It is important to store the new preamble in a temporary file,
                 # as pdflatex would not be able to read the header file quicker
-                # than we'd truncate it.
+                # than we would truncate it.
                 tar -xz || exit 1
-                perl -we '
+                perl -we '\''
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
                     open my $main,   ">", "_sshlatex_main.tex"        or die $!;
 
@@ -340,15 +355,15 @@ while :; do
                         print $fh $_ or die $!;
                         $fh = $main if /\\begin{document}/;
                     }
-                ' -- "$LC_FILE.tex"
+                '\'' -- "$LC_FILE.tex"
 
                 date +%s.%N > _sshlatex_compilation.time
 
                 # Check that the new preamble equals the preamble with which
-                # we've already initialized pdflatex. If not, abort pdflatex by
+                # we have already initialized pdflatex. If not, abort pdflatex by
                 # sending the "x" command and rerun.
                 if cmp -s _sshlatex_header.tex _sshlatex_header-next.tex >/dev/null; then
-                    echo '\input{_sshlatex_main.tex}'
+                    echo "\input{_sshlatex_main.tex}"
                 else
                     echo "*** Preamble change detected; aborting LaTeX and rerunning." >&2
                     touch _sshlatex_redo
@@ -361,7 +376,7 @@ while :; do
 
             if [ -e _sshlatex_redo ]; then
                 rm _sshlatex_redo
-                echo '\input{_sshlatex_header.tex}\input{_sshlatex_main.tex}' | pdflatex -jobname "$LC_FILE" >&2
+                echo "\input{_sshlatex_header.tex}\input{_sshlatex_main.tex}" | pdflatex -jobname "$LC_FILE" >&2
                 exitstatus="$?"
             fi
 
@@ -373,6 +388,7 @@ while :; do
                 perl -we "printf \"*** LaTeX compilation time: %.2f seconds\\n\", $(date +%s.%N) - $(cat _sshlatex_compilation.time)" >&2
             fi
             exit "$exitstatus"
+        '
 EOF
     )" 2> >(
         # This redirection is because we do not want to see the status messages
