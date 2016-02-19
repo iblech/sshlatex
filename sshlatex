@@ -16,22 +16,12 @@
 #    EOF
 #    )"
 
-# Recall that using "echo -n ..." is not necessarily safe (robust), if "..."
-# happens to look like an option. This function is a safe substitute. It's only
-# necessary because echo doesn't respect the usual convention of two dashes (--)
-# separating options from other arguments.
-function safeechon {
-    perl -we 'print $ARGV[0]' -- "$1"
-}
-
 # Given a LaTeX source file as first argument, outputs a null-delimited list of
 # dependencies the file has. The file itself is included as well.
 function texdeps {
-    safeechon "$1"
-    echo -en "\0"
-
     perl -we '
         my @files = ($ARGV[0]);
+        print "$ARGV[0]\0";
 
         # We do not use the usual while(<>) idiom (and @ARGV) because that is
         # not special-character-safe. The safe substitute operator <<>>
@@ -52,10 +42,11 @@ function texdeps {
             }
             close $fh or die $!;
         }
-    ' -- "$1"
 
-    bbl="`basename -- "$1" .tex`.bbl"
-    [ -e "$bbl" ] && { safeechon "$bbl"; echo -en "\0"; }
+        my $bbl = $ARGV[0];
+        $bbl =~ s/\.tex$/.bbl/;
+        print "$bbl\0" if -e $bbl;
+    ' -- "$1"
 }
 
 # Waits for the file given in the first argument (and its dependencies) to
