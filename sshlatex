@@ -29,7 +29,8 @@ function texdeps {
         while(@files) {
             open my $fh, "<", shift(@files) or next;
             while(defined(my $line = <$fh>)) {
-                for my $dep ($line =~ /\\(?:includegraphics|input|include|documentclass)(?:\[[^\]]*\])?{([^}]+)}/) {
+                # "imgslide" is a custom command for image-only slides
+                for my $dep ($line =~ /\\(?:includegraphics|input|include|documentclass|imgslide)(?:\[[^\]]*\])?{([^}]+)}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig
                     for("", qw< .png .jpeg .jpg .pdf .tex .cls .bbl .pdf_t >) {
                         if(-e "$dep$_") {
