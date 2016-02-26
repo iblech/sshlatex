@@ -94,8 +94,11 @@ function waitforfiles {
 function cleanup {
     echo -n "*** Cleaning up... " >&2
     rm -- "$LC_FILE.time" "$LC_FILE.new.pdf" 2>/dev/null
-    ssh "$host" 'rm -r "$LC_TEMPDIR"'
-    echo "done." >&2
+    if ssh "$host" 'rm -r "$LC_TEMPDIR"'; then
+        echo "done." >&2
+    else
+        echo "Couldn't remove working directory on the remote host: $LC_TEMPDIR" >&2
+    fi
 }
 
 # Perl program to stream the PDF file to the local host while it is being
@@ -265,7 +268,8 @@ bash -c '
     tempdir="`mktemp -d`"
     cd "$tempdir"
 
-    tar -xz || exit 1  # unpack the source file and its dependencies
+    # unpack the source file and its dependencies
+    tar -xz || exit 1
 
     echo "$LC_EEKCAT" > eekcat.pl
 
