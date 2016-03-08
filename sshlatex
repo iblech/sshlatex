@@ -297,7 +297,7 @@ bash -c '
 EOF
 )")"
 if [ -z "$LC_TEMPDIR" ]; then
-    echo "Didn't get a proper server response; aborting." >&2
+    echo "*** Didn't get a proper server response; aborting." >&2
     exit 1
 fi
 echo "Done." >&2
@@ -313,7 +313,7 @@ is_first_time=1
 
 while :; do
     [ -e "$LC_FILE.tex" ] || {
-        echo "*** Error: The LaTeX source file vanished. \"$LC_FILE.tex\"" >&2
+        echo "*** Error: The LaTeX source file has vanished. \"$LC_FILE.tex\"" >&2
         exit 1
     }
 
