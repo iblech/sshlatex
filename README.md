@@ -81,7 +81,9 @@ login credentials each time you change the LaTeX source._
 ## Purely local usage
 
 Because of the prestart feature, sshlatex can even make sense if you run it
-purely locally. Call `sshlatex localhost foo.tex`.
+purely locally. Call `sshlatex localhost foo.tex`. Invoked with the special
+hostname `localhost`, sshlatex avoids actually calling ssh. Therefore this
+command will work even if you don't have an ssh server running on localhost.
 
 
 ## Security considerations
