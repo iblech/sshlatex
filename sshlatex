@@ -95,7 +95,7 @@ function waitforfiles {
 function cleanup {
     echo -n "*** Cleaning up... " >&2
     rm -- ".sshlatex.$LC_FILE.time" ".sshlatex.$LC_FILE.new.pdf" 2>/dev/null
-    if ssh "$host" 'rm -r "$LC_TEMPDIR"'; then
+    if $ssh_command 'rm -r "$LC_TEMPDIR"'; then
         echo "done." >&2
     else
         echo "Couldn't remove working directory on the remote host: $LC_TEMPDIR" >&2
@@ -246,7 +246,12 @@ if($ARGV[1] eq "OUTPUT") {
 EEKCAT
 )"
 
-host="$1"
+if [ "$1" = "localhost" ]; then
+    ssh_command="bash -c"
+else
+    ssh_command="ssh $1"
+fi
+
 export LC_FILE="`basename -- "$2" .tex`"
 
 [ -n "$1" -a -n "$2" ] || {
@@ -274,7 +279,7 @@ export LC_FILE="`basename -- "$2" .tex`"
 time_of_remote_files="`date +%s.%N`"
 
 echo "*** Initial upload..." >&2
-export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz -- | ssh "$host" "$(cat <<'EOF'
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz -- | $ssh_command "$(cat <<'EOF'
 bash -c '
     tempdir="`mktemp -d`"
     cd "$tempdir"
@@ -334,7 +339,7 @@ while :; do
                                                  # for triggering the un-withholding of
                                                  # the pdflatex log output
         texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz --
-    } | LC_IS_FIRST_TIME="$is_first_time" ssh "$host" "$(cat <<'EOF'
+    } | LC_IS_FIRST_TIME="$is_first_time" $ssh_command "$(cat <<'EOF'
         bash -c '
             cd "$LC_TEMPDIR"
 
