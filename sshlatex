@@ -402,7 +402,7 @@ EOF
         # from pdflatex right away (they clutter the screen, in particular they
         # clutter possible error messages from the previous run). We only want
         # to see them when a changed source file was uploaded.
-        perl -MTime::HiRes -we '
+        perl -MTime::HiRes=sleep -we '
             my @buf;
 
             $|++;
@@ -418,10 +418,10 @@ EOF
             # If sshlatex is aborted with ^C, we do not want to see the (no
             # longer relevant) status messages from the current run of pdflatex
             # (already initialized with the preamble).
-            sleep 0.1;  # allow some time for the cleanup function to
-                        # unlink .sshlatex.$ENV{LC_FILE}.new.pdf
+            sleep 0.05;  # allow some time for the cleanup function to
+                         # unlink .sshlatex.$ENV{LC_FILE}.new.pdf
             exit unless -e ".sshlatex.$ENV{LC_FILE}.new.pdf";
-            # Should the cleanup function take longer than 0.1 seconds,
+            # Should the cleanup function take longer than 0.05 seconds,
             # we will accidentally print the status messages even though they
             # really should be suppresed. That is not such a big deal.
 
