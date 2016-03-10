@@ -94,15 +94,16 @@ Specifically:
 * sshlatex places several files, including LaTeX source files, in a temporary
   directory on the server side. This might leak data or metadata (for instance
   on when you are working on your LaTeX documents) to the administrator or
-  other users on the server. You can change the location
-  of the temporary directory by arranging an appropriate value of `$TMPDIR` on
-  the remote end.
+  other users on the server. You can change the location of the temporary
+  directory by arranging an appropriate value of `$TMPDIR` on the remote end.
 * sshlatex happily uploads any included files to the server, even files
   outside the base directory (as for instance prompted by a command like
   `\includegraphics{/etc/passwd}` in the LaTeX source file).
 * When downloading the resulting PDF file, sshlatex accepts any data from the
   server. This could be exploited by an attacker for a denial of service
   attack by filling the memory or disk.
+* [The usual problems with compiling untrusted LaTeX source files
+  apply.](https://0day.work/hacking-with-latex/)
 
 
 ## Shortcomings
