@@ -465,3 +465,4 @@ done
 # * Opportunistically run LaTeX up to approximately the point where the
 #   previous change occured
 # * Detect source code changes which happen during a run
+# * Support file references to outside of the base directory
