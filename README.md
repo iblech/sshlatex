@@ -29,10 +29,12 @@ See below for when you don't have passphrase-less login to the remote end set up
 Tip for when you're using a lightweight PDF viewer which doesn't auto-reload on
 changes: Put something like the following in your `beepy` program.
 
-    # Send the "r" key to all running mupdf instances.
-    for i in `xdotool search --class mupdf`; do
-        xdotool key --window $i r
-    done
+```shell
+# Send the "r" key to all running mupdf instances.
+for i in `xdotool search --class mupdf`; do
+    xdotool key --window $i r
+done
+```
 
 
 ## Features
