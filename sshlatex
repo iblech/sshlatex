@@ -30,14 +30,14 @@ function texdeps {
             open my $fh, "<", shift(@files) or next;
             while(defined(my $line = <$fh>)) {
                 # "imgslide" is a custom command for image-only slides
-                for my $dep ($line =~ /\\(?:includegraphics|input|include|documentclass|imgslide)(?:\[[^\]]*\])?{([^}]+)}/) {
+                for my $dep ($line =~ /\\(?:includegraphics|input|include|documentclass|usepackage|RequirePackage|imgslide)(?:\[[^\]]*\])?{([^}]+)}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig
-                    for("", qw< .png .jpeg .jpg .pdf .tex .cls .bbl .pdf_t >) {
+                    for("", qw< .png .jpeg .jpg .pdf .tex .cls .sty .bbl .pdf_t >) {
                         if(-e "$dep$_") {
                             print "$dep$_\0";
 
                             # Recursively search included LaTeX source files.
-                            push @files, "$dep$_" if "$dep$_" =~ /\.(?:tex|cls|pdf_t)$/;
+                            push @files, "$dep$_" if "$dep$_" =~ /\.(?:tex|cls|sty|pdf_t)$/;
                         }
                     }
                 }
@@ -353,11 +353,20 @@ while :; do
                 # Use the preamble of the previous run.
                 echo "\input{_sshlatex_header.tex}"
 
+                # Remember the time of last change of user-defined class files
+                # and style files. This way we can detect changes and rerun LaTeX.
+                # In case that the stat command does not understand the --format
+                # parameter, we gracefully degrade to not checking those files.
+                # In this case the user has to manually force a rerun by
+                # touching one of the tracked files.
+                old_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
+
                 # Then wait for the updated main part to trickle in.
                 # It is important to store the new preamble in a temporary file,
                 # as pdflatex would not be able to read the header file quicker
                 # than we would truncate it.
                 tar -xz || exit 1
+                new_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
                 perl -we '\''
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
                     open my $main,   ">", "_sshlatex_main.tex"        or die $!;
@@ -374,7 +383,7 @@ while :; do
                 # Check that the new preamble equals the preamble with which
                 # we have already initialized pdflatex. If not, abort pdflatex by
                 # sending the "x" command and rerun.
-                if cmp -s _sshlatex_header.tex _sshlatex_header-next.tex >/dev/null; then
+                if cmp -s _sshlatex_header.tex _sshlatex_header-next.tex >/dev/null && [ "$old_preamble_deps_timestamps" = "$new_preamble_deps_timestamps" ]; then
                     echo "\input{_sshlatex_main.tex}"
                 else
                     echo "*** Preamble change detected; aborting LaTeX and rerunning." >&2

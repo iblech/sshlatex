@@ -40,9 +40,9 @@ done
 ## Features
 
 * No installation is necessary, neither on the remote host nor on the local side.
-* Images and sources included with `\includegraphics`, `\input`, and `\include`
-  are automatically copied to the compile server. Accompanying `.bbl`
-  files are as well.
+* Images, sources, bibliography lists, and local class and style files
+  (for instance embedded using `\includegraphics`, `\input`, or `\include`) are
+  automatically copied to the compile server.
 * Even before the source file is changed, LaTeX gets already started on the
   remote host with the preamble of the previous run. This way all the required
   packages are already loaded when the new version is ready to be compiled,
