@@ -23,14 +23,24 @@ function texdeps {
         my @files = ($ARGV[0]);
         print "$ARGV[0]\0";
 
+        my $commands = "includegraphics|input|include|documentclass|usepackage|RequirePackage";
+
         # We do not use the usual while(<>) idiom (and @ARGV) because that is
         # not special-character-safe. The safe substitute operator <<>>
         # is only available from Perl 5.22 on, which we do not want to depend on.
         while(@files) {
             open my $fh, "<", shift(@files) or next;
             while(defined(my $line = <$fh>)) {
-                # "imgslide" is a custom command for image-only slides
-                for my $dep ($line =~ /\\(?:includegraphics|input|include|documentclass|usepackage|RequirePackage|imgslide)(?:\[[^\]]*\])?{([^}]+)}/) {
+                # Try to detect custom macros which include auxiliary files, as in:
+                # \newcommand{imageslide}[1]{...\includegraphics{#1}...}
+                # Of course, this crude heuristic does not cover all cases --
+                # the general case is intractable, since LaTeX is Turing
+                # complete. :-)
+                if($line =~ /$commands/ and $line =~ /\\newcommand{?\\(\w+)}?/) {
+                    $commands .= "|$1";
+                }
+
+                for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?{([^}]+)}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig
                     for("", qw< .png .jpeg .jpg .pdf .tex .cls .sty .bbl .pdf_t >) {
                         if(-e "$dep$_") {
