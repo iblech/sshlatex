@@ -126,4 +126,4 @@ redistribute and modify it under the terms of either:
 1. The GNU General Public License (GPL), version 3 or (at your option) any
    later version published by the Free Software Foundation.
 2. The LaTeX Project Public License (LPPL), version 1.3c or (at your option)
-   any later version.
+   any later version published by the LaTeX3 project.
