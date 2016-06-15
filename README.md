@@ -42,7 +42,8 @@ done
 * No installation is necessary, neither on the remote host nor on the local side.
 * Images, sources, bibliography lists, and local class and style files
   (for instance embedded using `\includegraphics`, `\input`, or `\include`) are
-  automatically copied to the compile server.
+  automatically copied to the compile server. Using a crude heuristic, this
+  even extends to files included by custom commands.
 * Even before the source file is changed, LaTeX gets already started on the
   remote host with the preamble of the previous run. This way all the required
   packages are already loaded when the new version is ready to be compiled,
