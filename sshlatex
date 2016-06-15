@@ -248,8 +248,10 @@ EEKCAT
 
 if [ "$1" = "localhost" ]; then
     ssh_command="bash -c"
+    tar_opts=""
 else
     ssh_command="ssh $1"
+    tar_opts="-z"
 fi
 
 export LC_FILE="`basename -- "$2" .tex`"
@@ -279,13 +281,14 @@ export LC_FILE="`basename -- "$2" .tex`"
 time_of_remote_files="`date +%s.%N`"
 
 echo "*** Initial upload..." >&2
-export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cvz -- | $ssh_command "$(cat <<'EOF'
+export LC_TAR_OPTS="$tar_opts"
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cv $tar_opts -- | $ssh_command "$(cat <<'EOF'
 bash -c '
     tempdir="`mktemp -d`"
     cd "$tempdir"
 
     # unpack the source file and its dependencies
-    tar -xz || exit 1
+    tar -x $LC_TAR_OPTS || exit 1
 
     echo "$LC_EEKCAT" > eekcat.pl
 
@@ -338,7 +341,7 @@ while :; do
                                                  # for updating $time_of_remote_files, and
                                                  # for triggering the un-withholding of
                                                  # the pdflatex log output
-        texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cvz --
+        texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cv $tar_opts --
     } | LC_IS_FIRST_TIME="$is_first_time" $ssh_command "$(cat <<'EOF'
         bash -c '
             cd "$LC_TEMPDIR"
@@ -365,7 +368,7 @@ while :; do
                 # It is important to store the new preamble in a temporary file,
                 # as pdflatex would not be able to read the header file quicker
                 # than we would truncate it.
-                tar -xz || exit 1
+                tar -x $LC_TAR_OPTS || exit 1
                 new_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
                 perl -we '\''
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
