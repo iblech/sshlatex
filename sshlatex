@@ -54,7 +54,7 @@ function texdeps {
                                 print "$dir$dep$_\0";
 
                                 # Recursively search included LaTeX source files.
-                                push @files, "$dir$dep$_" if "$dep$_" =~ /\.(?:tex|cls|sty|pdf_t)$/;
+                                push @files, "$dir$dep$_" if "$dep$_" =~ /\.(?:tex|cls|sty|pdf_t|pspdftex)$/;
                             }
                         }
                     }
