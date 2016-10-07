@@ -23,6 +23,8 @@ function texdeps {
         my @files = ($ARGV[0]);
         print "$ARGV[0]\0";
 
+        my @dirs = ("");
+
         my $commands = "includegraphics|input|include|documentclass|usepackage|RequirePackage";
 
         # We do not use the usual while(<>) idiom (and @ARGV) because that is
@@ -40,14 +42,20 @@ function texdeps {
                     $commands .= "|$1";
                 }
 
+                if($line =~ /\\graphicspath{({.*?})+}/) {
+                    push @dirs, map { "$_/" } grep { length $_ > 0 } split /[{}]/, $1;
+                }
+
                 for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?{([^}]+)}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig
                     for("", qw< .png .jpeg .jpg .pdf .tex .cls .sty .bbl .pdf_t >) {
-                        if(-e "$dep$_") {
-                            print "$dep$_\0";
+                        for my $dir (@dirs) {
+                            if(-e "$dir$dep$_") {
+                                print "$dir$dep$_\0";
 
-                            # Recursively search included LaTeX source files.
-                            push @files, "$dep$_" if "$dep$_" =~ /\.(?:tex|cls|sty|pdf_t)$/;
+                                # Recursively search included LaTeX source files.
+                                push @files, "$dir$dep$_" if "$dep$_" =~ /\.(?:tex|cls|sty|pdf_t)$/;
+                            }
                         }
                     }
                 }
