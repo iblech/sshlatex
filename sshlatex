@@ -362,7 +362,10 @@ while :; do
         texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cv $tar_opts --
     } | LC_IS_FIRST_TIME="$is_first_time" $ssh_command "$(cat <<'EOF'
         bash -c '
-            cd "$LC_TEMPDIR"
+            cd "$LC_TEMPDIR" || {
+                echo "*** Working directory $LC_TEMPDIR vanished on the remote side." >&2
+                exit 1
+            }
 
             # Start streaming the output file.
             rm -- "$LC_FILE.pdf" 2>/dev/null
