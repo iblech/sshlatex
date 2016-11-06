@@ -392,14 +392,22 @@ while :; do
                 tar -x $LC_TAR_OPTS || exit 1
                 new_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
                 perl -we '\''
+                    # Search the input for the \begin{document} marker.
+                    # If multiple such are found, the last one gets to
+                    # determine where the "main" document starts.
+                    # This is useful to precompile more than just the preamble.
+                    my @parts = ([]);
+                    while(<>) {
+                        push @{ $parts[-1] }, $_;
+                        push @parts, [] if /\\begin{document}/;
+                    }
+
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
                     open my $main,   ">", "_sshlatex_main.tex"        or die $!;
-
-                    my $fh = $header;
-                    while(<>) {
-                        print $fh $_ or die $!;
-                        $fh = $main if /\\begin{document}/;
-                    }
+                    print $main   @{ pop @parts } or die $!;
+                    print $header @$_             or die $! for @parts;
+                    close $main              or die $!;
+                    close $header            or die $!;
                 '\'' -- "$LC_FILE.tex"
 
                 date +%s.%N > _sshlatex_compilation.time
