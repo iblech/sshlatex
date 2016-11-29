@@ -105,8 +105,8 @@ Specifically:
 * When downloading the resulting PDF file, sshlatex accepts any data from the
   server. This could be exploited by an attacker for a denial of service
   attack by filling the memory or disk.
-* [The usual problems with compiling untrusted LaTeX source files
-  apply.](https://0day.work/hacking-with-latex/)
+* [The usual problems with compiling](https://0day.work/hacking-with-latex/)
+  [untrusted LaTeX source files apply.](https://scumjr.github.io/2016/11/28/pwning-coworkers-thanks-to-latex/)
 
 
 ## Shortcomings
