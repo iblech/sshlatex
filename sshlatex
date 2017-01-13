@@ -496,3 +496,6 @@ done
 #   previous change occured
 # * Detect source code changes which happen during a run
 # * Support file references to outside of the base directory
+# * Don't use an absolute timestamp for tar, but rather the modification date
+#   of some file. That way no problems arise on NFS mounted directories
+#   where the local clock doesn't match the NFS server's clock.
