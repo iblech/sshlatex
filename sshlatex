@@ -310,13 +310,6 @@ bash -c '
 
     echo "$LC_EEKCAT" > eekcat.pl
 
-    # Extract the LaTeX preamble.
-    # It is important that the begin-of-document marker is put into
-    # _sshlatex_header.tex instead of _sshlatex_main.tex. This way pdflatex
-    # will do more initialization while we are waiting for the changed source
-    # to arrive.
-    perl -nwe "print; last if /\\\\begin{document}/" -- "$LC_FILE.tex" > _sshlatex_header.tex
-
     # Return the path of the working directory to the local host.
     echo "$tempdir"
 '
@@ -375,7 +368,9 @@ while :; do
 
             {
                 # Use the preamble of the previous run.
-                echo "\input{_sshlatex_header.tex}"
+                if [ "$LC_IS_FIRST_TIME" = "0" ]; then
+                    echo "\input{_sshlatex_header.tex}"
+                fi
 
                 # Remember the time of last change of user-defined class files
                 # and style files. This way we can detect changes and rerun LaTeX.
@@ -391,11 +386,20 @@ while :; do
                 # than we would truncate it.
                 tar -x $LC_TAR_OPTS || exit 1
                 new_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
+
+                # Extract the LaTeX preamble and the main part of the document.
+                # It is not crucial, but wise to put the begin-of-document
+                # marker into _sshlatex_header-next.tex instead of
+                # _sshlatex_main.tex. This way pdflatex will do more
+                # initialization while we are waiting for the changed source to
+                # arrive.
+
                 perl -we '\''
                     # Search the input for the \begin{document} marker.
-                    # If multiple such are found, the last one gets to
+                    # If multiple such are found, the last one gets used to
                     # determine where the "main" document starts.
-                    # This is useful to precompile more than just the preamble.
+                    # This is useful to precompile more parts of the document
+                    # than just the preamble.
                     my @parts = ([]);
                     while(<>) {
                         push @{ $parts[-1] }, $_;
@@ -406,21 +410,26 @@ while :; do
                     open my $main,   ">", "_sshlatex_main.tex"        or die $!;
                     print $main   @{ pop @parts } or die $!;
                     print $header @$_             or die $! for @parts;
-                    close $main              or die $!;
-                    close $header            or die $!;
+                    close $main                   or die $!;
+                    close $header                 or die $!;
                 '\'' -- "$LC_FILE.tex"
 
                 date +%s.%N > _sshlatex_compilation.time
 
-                # Check that the new preamble equals the preamble with which
-                # we have already initialized pdflatex. If not, abort pdflatex by
-                # sending the "x" command and rerun.
-                if cmp -s _sshlatex_header.tex _sshlatex_header-next.tex >/dev/null && [ "$old_preamble_deps_timestamps" = "$new_preamble_deps_timestamps" ]; then
-                    echo "\input{_sshlatex_main.tex}"
+                if [ "$LC_IS_FIRST_TIME" = "0" ]; then
+                    # Check that the new preamble equals the preamble with which
+                    # we have already initialized pdflatex. If not, abort pdflatex by
+                    # sending the "x" command and rerun.
+                    if cmp -s _sshlatex_header.tex _sshlatex_header-next.tex >/dev/null && [ "$old_preamble_deps_timestamps" = "$new_preamble_deps_timestamps" ]; then
+                        echo "\input{_sshlatex_main.tex}"
+                    else
+                        echo "*** Preamble change detected; aborting LaTeX and rerunning." >&2
+                        touch _sshlatex_redo
+                        echo x
+                    fi
                 else
-                    echo "*** Preamble change detected; aborting LaTeX and rerunning." >&2
-                    touch _sshlatex_redo
-                    echo x
+                    # No check needed; simply use the current header.
+                    echo "\input{_sshlatex_header-next.tex}\input{_sshlatex_main.tex}"
                 fi
             } | pdflatex -jobname "$LC_FILE" >&2
             exitstatus="$?"
