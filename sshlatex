@@ -524,3 +524,5 @@ done
 # * Don't use an absolute timestamp for tar, but rather the modification date
 #   of some file. That way no problems arise on NFS mounted directories
 #   where the local clock doesn't match the NFS server's clock.
+# * Abort a running prelude compilation using `kill` if it is detected
+#   that it's no longer needed
