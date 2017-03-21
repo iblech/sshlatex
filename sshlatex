@@ -25,7 +25,12 @@ function texdeps {
 
         my @dirs = ("");
 
-        my $commands = "includegraphics|input|include|documentclass|usepackage|RequirePackage";
+        my $commands = "includegraphics|input|include|bibliography|documentclass|usepackage|RequirePackage";
+        # It is not directly useful to copy .bib files referenced by
+        # \bibliography, since we never call biblatex or biber on the remote
+        # side. However, it is useful to have those files available on the
+        # remote in case one wants to manually ssh to the remote and run
+        # biblatex or biber.
 
         # We do not use the usual while(<>) idiom (and @ARGV) because that is
         # not special-character-safe. The safe substitute operator <<>>
@@ -48,7 +53,7 @@ function texdeps {
 
                 for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?{([^}]+)}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig
-                    for("", qw< .png .jpeg .jpg .pdf .tex .cls .sty .bbl .pdf_t >) {
+                    for("", qw< .png .jpeg .jpg .pdf .tex .cls .sty .bbl .bib .pdf_t >) {
                         for my $dir (@dirs) {
                             if(-e "$dir$dep$_") {
                                 print "$dir$dep$_\0";
