@@ -40,21 +40,33 @@ done
 ## Features
 
 * No installation is necessary, neither on the remote host nor on the local side.
+
 * Images, sources, bibliography lists, and local class and style files
   (for instance embedded using `\includegraphics`, `\input`, or `\include`) are
   automatically copied to the compile server. Using a crude heuristic, this
   even extends to files included by custom commands.
+
 * Even before the source file is changed, LaTeX gets already started on the
   remote host with the preamble of the previous run. This way all the required
   packages are already loaded when the new version is ready to be compiled,
   shaving off a couple of hundreds of milliseconds.
+
+  If you want more parts of your document to be precompiled, not only the
+  preamble, then put a commented `% \begin{document}` declaration between the
+  part which should be precompiled and the part which changes often. LaTeX will
+  ignore this declaration, but sshlatex will use it to determine where to split
+  the file.
+
 * Downloading the resulting PDF file starts before each run of `pdflatex`
   has finished. Since `pdflatex` does not simply append to the output file, but
   seeks and overwrites earlier parts, sshlatex is prepared to transfer some
   blocks multiple times if necessary. This is still faster than waiting for
   `pdflatex` to finish and then doing a proper `rsync`.
+
 * Temporary files on the server are properly cleaned up on `^C`.
+
 * Filenames with special characters in them are supported.
+
 * Proper care is taken to ensure that shell commands directed at the remote
   host are interpreted by the bash, even if a different shell is the default.
 
