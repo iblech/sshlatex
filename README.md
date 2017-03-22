@@ -16,7 +16,7 @@ file before LaTeX finishes creating it.
 ## Usage
 
 1. Run `sshlatex ssh.example.org foo.tex` in the background. Just as with
-   `pdflatex`, you may drop the `.tex` if you want to.
+   `pdflatex`, you may drop the extension `.tex` if you want to.
 2. Work on your file `foo.tex`.
 3. Enjoy an updated PDF each time you save your changes.
 
@@ -24,17 +24,22 @@ Optionally, put a program `beepy` in your `$PATH` (or change the corresponding
 line in the source code) to audibly inform you of a completed run. Useful for
 when you're switching virtual desktops and don't see the output of sshlatex.
 
-See below for when you don't have passphrase-less login to the remote end set up.
+* See below for when you don't have passphrase-less login to the remote end set up.
 
-Tip for when you're using a lightweight PDF viewer which doesn't auto-reload on
-changes: Put something like the following in your `beepy` program.
+* Tip for when you're using a lightweight PDF viewer which doesn't auto-reload on
+  changes: Put something like the following in your `beepy` program.
 
-```shell
-# Send the "r" key to all running mupdf instances.
-for i in `xdotool search --class mupdf`; do
-    xdotool key --window $i r
-done
-```
+  ```shell
+  # Send the "r" key to all running mupdf instances.
+  for i in `xdotool search --class mupdf`; do
+      xdotool key --window $i r
+  done
+  ```
+
+* Use the `draft` option in your LaTeX `\documentclass` command to further
+  speed up compilation. For instance, this option disables the
+  [microtype](http://texdoc.net/texmf-dist/doc/latex/microtype/microtype.pdf)
+  package.
 
 
 ## Features
