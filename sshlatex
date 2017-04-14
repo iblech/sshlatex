@@ -371,16 +371,15 @@ while :; do
 
             echo "*** Ready on the remote side..." >&2
 
-            # Save the aux and toc files of the previous run (if available).
+            # Save the auxiliary files of the previous run (if available).
             # In case we have to abort LaTeX because the preamble changed,
-            # we restore these two files from their backups. If we did not do
-            # that, it can happen that the aux and toc files are corrupted or
+            # we restore these files from their backups. If we did not do
+            # that, it can happen that the auxiliary files are corrupted or
             # unfinished by the abort, so that the new run will not be based on
             # useful files, yielding (for instance) an empty table of contents.
             # This is a nuisance, since the document contents can then jump pages,
             # impeding a fast visual comparison in the PDF viewer.
-            cp -- "$LC_FILE.aux" _sshlatex_previous_run.aux >&2
-            cp -- "$LC_FILE.toc" _sshlatex_previous_run.toc >&2
+            tar -cf _sshlatex_auxiliary_files.tar -- "$LC_FILE".{aux,bcf,blg,toc} 2>/dev/null
 
             {
                 # Use the preamble of the previous run.
@@ -454,9 +453,8 @@ while :; do
 
             if [ -e _sshlatex_redo ]; then
                 rm _sshlatex_redo
-                # Restore aux and toc files for the reason described above
-                mv -- _sshlatex_previous_run.aux "$LC_FILE.aux" >&2
-                mv -- _sshlatex_previous_run.toc "$LC_FILE.toc" >&2
+                # Restore auxiliary files for the reason described above
+                tar -xf _sshlatex_auxiliary_files.tar 2>/dev/null
                 echo "\input{_sshlatex_header.tex}\input{_sshlatex_main.tex}" | pdflatex -jobname "$LC_FILE" >&2
                 exitstatus="$?"
             fi
