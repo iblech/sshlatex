@@ -466,6 +466,14 @@ while :; do
             else
                 perl -we "printf \"*** LaTeX compilation time: %.2f seconds\\n\", $(date +%s.%N) - $(cat _sshlatex_compilation.time)" >&2
             fi
+
+            # In case that LaTeX did not finish cleanly, the auxiliary files
+            # might be truncated. We therefore restore them from our backup, in
+            # preparation for the next run.
+            if [ "$exitstatus" != "0" ]; then
+                tar -xf _sshlatex_auxiliary_files.tar 2>/dev/null
+            fi
+
             exit "$exitstatus"
         '
 EOF
