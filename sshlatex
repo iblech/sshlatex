@@ -459,8 +459,13 @@ while :; do
                 exitstatus="$?"
             fi
 
-            # Signalize completion of the output file to eekcat
+            # Signalize completion of the output file to eekcat.
             kill -USR1 %1
+
+            # Mention the path of the working directory, but do not highlight
+            # it with "***".
+            echo "Working directory on remote server: $LC_TEMPDIR" >&2
+
             if [ "$LC_IS_FIRST_TIME" = "0" ]; then
                 perl -we "printf \"*** LaTeX compilation time: %.2f seconds (not including prelude compilation)\\n\", $(date +%s.%N) - $(cat _sshlatex_compilation.time)" >&2
             else
