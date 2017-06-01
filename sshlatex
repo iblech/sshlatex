@@ -269,6 +269,12 @@ if($ARGV[1] eq "OUTPUT") {
 EEKCAT
 )"
 
+export LC_FORCE_DRAFT_MODE=""
+if [ "$1" = "--draft" ]; then
+    LC_FORCE_DRAFT_MODE=1
+    shift
+fi
+
 if [ "$1" = "localhost" ]; then
     ssh_command="bash -c"
     tar_opts=""
@@ -401,6 +407,14 @@ while :; do
                 # than we would truncate it.
                 tar -x $LC_TAR_OPTS || exit 1
                 new_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
+
+                # Add the "draft" option to the document class, if wished.
+                if [ "$LC_FORCE_DRAFT_MODE" = "1" ]; then
+                    perl -i -pwe "
+                        s/\\\\documentclass\\[/\\\\documentclass[draft,/g;
+                        s/\\\\documentclass\\{/\\\\documentclass[draft]{/g;
+                    " -- "$LC_FILE.tex"
+                fi
 
                 # Extract the LaTeX preamble and the main part of the document.
                 # It is not crucial, but wise to put the begin-of-document
