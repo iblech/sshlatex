@@ -373,7 +373,7 @@ while :; do
 
             # Save the auxiliary files of the previous run (if available).
             # In case we have to abort LaTeX because the preamble changed,
-            # we restore these files from their backups. If we did not do
+            # we restore these files from their backups. If we do not do
             # that, it can happen that the auxiliary files are corrupted or
             # unfinished by the abort, so that the new run will not be based on
             # useful files, yielding (for instance) an empty table of contents.
