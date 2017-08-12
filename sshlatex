@@ -25,7 +25,7 @@ function texdeps {
 
         my @dirs = ("");
 
-        my $commands = "includegraphics|input|include|bibliography|documentclass|usepackage|RequirePackage|externaldocument|zexternaldocument";
+        my $commands = "includegraphics|includepdf|input|include|bibliography|documentclass|usepackage|RequirePackage|externaldocument|zexternaldocument";
         # It is not directly useful to copy .bib files referenced by
         # \bibliography, since we never call biblatex or biber on the remote
         # side. However, it is useful to have those files available on the
