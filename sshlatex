@@ -43,15 +43,15 @@ function texdeps {
                 # Of course, this crude heuristic does not cover all cases --
                 # the general case is intractable, since LaTeX is Turing
                 # complete. :-)
-                if($line =~ /$commands/ and $line =~ /\\newcommand{?\\(\w+)}?/) {
+                if($line =~ /$commands/ and $line =~ /\\newcommand\{?\\(\w+)\}?/) {
                     $commands .= "|$1";
                 }
 
-                if($line =~ /\\graphicspath{({.*?})+}/) {
+                if($line =~ /\\graphicspath\{(\{.*?\})+\}/) {
                     push @dirs, map { "$_/" } grep { length $_ > 0 } split /[{}]/, $1;
                 }
 
-                for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?{([^}]+)}/) {
+                for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?\{([^\}]+)\}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig
                     for("", qw< .png .jpeg .jpg .pdf .tex .cls .sty .bbl .bib .pdf_t >) {
                         for my $dir (@dirs) {
