@@ -306,7 +306,7 @@ time_of_remote_files="`date +%s.%N`"
 
 echo "*** Initial upload..." >&2
 export LC_TAR_OPTS="$tar_opts"
-export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -cv $tar_opts -- | $ssh_command "$(cat <<'EOF'
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -hcv $tar_opts -- | $ssh_command "$(cat <<'EOF'
 bash -c '
     tempdir="`mktemp -d`"
     cd "$tempdir"
@@ -358,7 +358,7 @@ while :; do
                                                  # for updating $time_of_remote_files, and
                                                  # for triggering the un-withholding of
                                                  # the pdflatex log output
-        texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -cv $tar_opts --
+        texdeps "$LC_FILE.tex" | xargs -0 tar -N "@$time_of_remote_files" -hcv $tar_opts --
     } | LC_IS_FIRST_TIME="$is_first_time" $ssh_command "$(cat <<'EOF'
         bash -c '
             cd "$LC_TEMPDIR" || {
