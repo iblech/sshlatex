@@ -419,7 +419,7 @@ while :; do
                     my @parts = ([]);
                     while(<>) {
                         push @{ $parts[-1] }, $_;
-                        push @parts, [] if /\\begin{document}/;
+                        push @parts, [] if /\\begin\{document\}/;
                     }
 
                     open my $header, ">", "_sshlatex_header-next.tex" or die $!;
