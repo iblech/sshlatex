@@ -306,8 +306,16 @@ time_of_remote_files="`date +%s.%N`"
 
 echo "*** Initial upload..." >&2
 export LC_TAR_OPTS="$tar_opts"
-export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -hcv $tar_opts -- | $ssh_command "$(cat <<'EOF'
+export LC_TEMPDIR="$(texdeps "$LC_FILE.tex" | xargs -0 tar -hcv $tar_opts -- | LC_PASSING_WORKS=1 $ssh_command "$(cat <<'EOF'
 bash -c '
+    if [ "$LC_PASSING_WORKS" != "1" ]; then
+        echo "*** Error: ssh does not pass LC_* environment variables to the server." >&2
+        echo "    Did you establish an ssh connection prior to running sshlatex which is" >&2
+        echo "    reused using connection sharing? In this case, try passing -o SendEnv=LC_*" >&2
+        echo "    to the ssh command which establishes the master connection." >&2
+        exit 1
+    fi
+
     tempdir="`mktemp -d`"
     cd "$tempdir"
 
