@@ -25,12 +25,13 @@ function texdeps {
 
         my @dirs = ("");
 
-        my $commands = "includegraphics|includepdf|input|include|bibliography|documentclass|usepackage|RequirePackage|externaldocument|zexternaldocument";
+        my $commands = "includegraphics|includepdf|input|include|bibliography|documentclass|usepackage|RequirePackage|externaldocument|zexternaldocument|movie";
         # It is not directly useful to copy .bib files referenced by
         # \bibliography, since we never call biblatex or biber on the remote
         # side. However, it is useful to have those files available on the
         # remote in case one wants to manually ssh to the remote and run
         # biblatex or biber.
+        # XXX: The "movie" command (of the multimedia package) is not properly supported.
 
         # We do not use the usual while(<>) idiom (and @ARGV) because that is
         # not special-character-safe. The safe substitute operator <<>>
@@ -54,7 +55,7 @@ function texdeps {
                 for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?\{([^\}]+)\}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig.
                     # aux files are required by \externaldocument (of the xr package).
-                    for("", qw< .png .jpeg .jpg .pdf .tex .cls .sty .bbl .bib .pdf_t .aux >) {
+                    for("", qw< .png .jpeg .jpg .gif .mp4 .pdf .tex .cls .sty .bbl .bib .pdf_t .aux >) {
                         for my $dir (@dirs) {
                             if(-e "$dir$dep$_") {
                                 print "$dir$dep$_\0";
