@@ -79,7 +79,7 @@ function texdeps {
 # Waits for the file given in the first argument (and its dependencies) to
 # change.
 function waitforfiles {
-    texdeps "$1" | HAVE_INOTIFYWAIT="`which inotifywait`" xargs -0 perl -MTime::HiRes=sleep,time,stat -we '
+    texdeps "$1" | HAVE_INOTIFYWAIT="`which inotifywait 2>/dev/null`" xargs -0 perl -MTime::HiRes=sleep,time,stat -we '
         my $DELAY = 0.05;
 
         if($ENV{HAVE_INOTIFYWAIT}) {
