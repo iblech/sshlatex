@@ -21,7 +21,15 @@
 function texdeps {
     perl -Mstrict -we '
         my @files = ($ARGV[0]);
-        print "$ARGV[0]\0";
+        my %seen;
+        my %printed;
+
+        sub mention {
+            return if $printed{$_[0]}++;
+            print "$_[0]\0";
+        }
+
+        mention($ARGV[0]);
 
         my @dirs = ("");
 
@@ -37,7 +45,10 @@ function texdeps {
         # not special-character-safe. The safe substitute operator <<>>
         # is only available from Perl 5.22 on, which we do not want to depend on.
         while(@files) {
-            open my $fh, "<", shift(@files) or next;
+            my $file = shift @files;
+            next if $seen{$file}++;
+            open my $fh, "<", $file or next;
+
             while(defined(my $line = <$fh>)) {
                 # Try to detect custom macros which include auxiliary files, as in:
                 # \newcommand{imageslide}[1]{...\includegraphics{#1}...}
@@ -58,7 +69,7 @@ function texdeps {
                     for("", qw< .png .jpeg .jpg .gif .mp4 .pdf .tex .cls .sty .bbl .bib .pdf_t .aux >) {
                         for my $dir (@dirs) {
                             if(-e "$dir$dep$_") {
-                                print "$dir$dep$_\0";
+                                mention("$dir$dep$_");
 
                                 # Recursively search included LaTeX source files.
                                 push @files, "$dir$dep$_" if "$dep$_" =~ /\.(?:tex|cls|sty|pdf_t|pspdftex)$/;
@@ -67,6 +78,7 @@ function texdeps {
                     }
                 }
             }
+
             close $fh or die $!;
         }
 
