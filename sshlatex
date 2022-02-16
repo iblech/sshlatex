@@ -77,6 +77,12 @@ function texdeps {
                         }
                     }
                 }
+
+                for my $basename ($line =~ /\\animategraphics(?:\[[^\]]*\])?\{[^\}]*\}\{([^\}]+)}/) {
+                    for my $dir (@dirs) {
+                        mention($_) for glob "$dir/$basename*";
+                    }
+                }
             }
 
             close $fh or die $!;
