@@ -378,7 +378,13 @@ is_first_time=1
 while :; do
     [ -e "$LC_FILE.tex" ] || {
         echo "*** Error: The LaTeX source file has vanished. \"$LC_FILE.tex\"" >&2
-        exit 1
+        echo "    Will try again in one second." >&2
+        sleep 1
+        [ -e "$LC_FILE.tex" ] || {
+            echo "*** File still non-existent. Exiting." >&2
+            exit 1
+        }
+        echo "*** Good: File existing again. Continuing." >&2
     }
 
     # Wait for changes in the source file and push them to the remote.
