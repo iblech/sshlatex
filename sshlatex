@@ -31,6 +31,9 @@ function texdeps {
 
         mention($ARGV[0]);
 
+        my $jobname = $ARGV[0];
+        $jobname =~ s/\.tex$//i;
+
         my @dirs = ("");
 
         my $commands = "includegraphics|includepdf|input|include|bibliography|documentclass|usepackage|RequirePackage|externaldocument|zexternaldocument|movie";
@@ -66,13 +69,22 @@ function texdeps {
                 for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?\{([^\}]+)\}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig.
                     # aux files are required by \externaldocument (of the xr package).
-                    for("", qw< .png .jpeg .jpg .gif .mp4 .pdf .tex .cls .sty .bbl .bib .pdf_t .aux >) {
+                    for my $ext ("", qw< .png .jpeg .jpg .gif .mp4 .pdf .tex .cls .sty .bbl .bib .pdf_t .aux >) {
                         for my $dir (@dirs) {
-                            if(-e "$dir$dep$_") {
-                                mention("$dir$dep$_");
+                            # We specifically exclude $jobname.pdf for three reasons.
+                            # (1) The file $jobname.pdf can never be a useful
+                            #     image to be included, so if $jobname.pdf
+                            #     is detected here then only because the regex is
+                            #     too permissive.
+                            # (2) It would be wasteful to transmit $jobname.pdf.
+                            # (3) Transmitting $jobname.pdf can cause a race
+                            #     where the newly compiled PDF is immediately
+                            #     overwritten by the earlier stale copy.
+                            if(-e "$dir$dep$ext" and not "$dir$dep$ext" eq "$jobname.pdf") {
+                                mention("$dir$dep$ext");
 
                                 # Recursively search included LaTeX source files.
-                                push @files, "$dir$dep$_" if "$dep$_" =~ /\.(?:tex|cls|sty|pdf_t|pspdftex)$/;
+                                push @files, "$dir$dep$ext" if "$dep$ext" =~ /\.(?:tex|cls|sty|pdf_t|pspdftex)$/;
                             }
                         }
                     }
