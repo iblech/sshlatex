@@ -69,7 +69,7 @@ function texdeps {
                 for my $dep ($line =~ /\\(?:$commands)(?:\[[^\]]*\])?\{([^\}]+)\}/) {
                     # pdf_t is the default extension for the combined LaTeX/PDF export of xfig.
                     # aux files are required by \externaldocument (of the xr package).
-                    for my $ext ("", qw< .png .jpeg .jpg .gif .mp4 .pdf .tex .cls .sty .bbl .bib .pdf_t .aux >) {
+                    for my $ext ("", qw< .png .jpeg .jpg .gif .mp4 .pdf .tex .cls .cfg .sty .bbl .bib .pdf_t .aux >) {
                         for my $dir (@dirs) {
                             # We specifically exclude $jobname.pdf for three reasons.
                             # (1) The file $jobname.pdf can never be a useful
@@ -84,7 +84,7 @@ function texdeps {
                                 mention("$dir$dep$ext");
 
                                 # Recursively search included LaTeX source files.
-                                push @files, "$dir$dep$ext" if "$dep$ext" =~ /\.(?:tex|cls|sty|pdf_t|pspdftex)$/;
+                                push @files, "$dir$dep$ext" if "$dep$ext" =~ /\.(?:tex|cls|cfg|sty|pdf_t|pspdftex)$/;
                             }
                         }
                     }
@@ -439,14 +439,14 @@ while :; do
                 # parameter, we gracefully degrade to not checking those files.
                 # In this case the user has to manually force a rerun by
                 # touching one of the tracked files.
-                old_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
+                old_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty *.cfg 2>/dev/null)"
 
                 # Then wait for the updated main part to trickle in.
                 # It is important to store the new preamble in a temporary file,
                 # as pdflatex would not be able to read the header file quicker
                 # than we would truncate it.
                 tar -x $LC_TAR_OPTS || exit 1
-                new_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty 2>/dev/null)"
+                new_preamble_deps_timestamps="$(stat --format="%Y" -- *.cls *.sty *.cfg 2>/dev/null)"
 
                 # Extract the LaTeX preamble and the main part of the document.
                 # It is not crucial, but wise to put the begin-of-document
